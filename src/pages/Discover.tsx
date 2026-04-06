@@ -1,0 +1,116 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Input } from '@/components/ui/input';
+import { Search, TrendingUp } from 'lucide-react';
+import BottomNav from '@/components/BottomNav';
+
+const CATEGORIES = ['All', 'Comedy', 'True Crime', 'Tech', 'Business', 'Health', 'Education', 'News', 'Sports', 'Music', 'Lifestyle', 'Science'];
+
+interface ReelThumb {
+  id: string;
+  title: string;
+  thumbnail_url: string | null;
+  video_url: string;
+  views_count: number;
+  likes_count: number;
+  category: string;
+  profiles: {
+    username: string;
+  };
+}
+
+const Discover = () => {
+  const navigate = useNavigate();
+  const [search, setSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [reels, setReels] = useState<ReelThumb[]>([]);
+
+  useEffect(() => {
+    const fetchReels = async () => {
+      let query = supabase
+        .from('reels')
+        .select('id, title, thumbnail_url, video_url, views_count, likes_count, category, profiles!reels_user_id_fkey(username)')
+        .order('views_count', { ascending: false })
+        .limit(30);
+
+      if (selectedCategory !== 'All') {
+        query = query.eq('category', selectedCategory);
+      }
+      if (search.trim()) {
+        query = query.ilike('title', `%${search.trim()}%`);
+      }
+
+      const { data } = await query;
+      setReels((data as unknown as ReelThumb[]) || []);
+    };
+    fetchReels();
+  }, [selectedCategory, search]);
+
+  return (
+    <div className="min-h-screen bg-background pb-20">
+      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border p-4 space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search PodReels..."
+            className="pl-9"
+          />
+        </div>
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar">
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
+                selectedCategory === cat
+                  ? 'gradient-primary text-primary-foreground'
+                  : 'bg-secondary text-secondary-foreground'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-2">
+        {reels.length > 0 && (
+          <div className="flex items-center gap-2 px-2 py-3">
+            <TrendingUp className="w-4 h-4 text-accent" />
+            <span className="text-sm font-semibold">Trending PodReels</span>
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-1">
+          {reels.map((reel) => (
+            <button
+              key={reel.id}
+              onClick={() => navigate('/feed')}
+              className="aspect-[9/16] bg-muted relative overflow-hidden rounded-lg"
+            >
+              {reel.thumbnail_url ? (
+                <img src={reel.thumbnail_url} className="w-full h-full object-cover" alt={reel.title} />
+              ) : (
+                <video src={reel.video_url} className="w-full h-full object-cover" muted preload="metadata" />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 to-transparent" />
+              <div className="absolute bottom-2 left-2 right-2">
+                <p className="text-primary-foreground text-xs font-medium line-clamp-2">{reel.title}</p>
+                <p className="text-primary-foreground/70 text-[10px] mt-0.5">@{reel.profiles.username}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+        {reels.length === 0 && (
+          <p className="text-center text-muted-foreground py-12">No PodReels found</p>
+        )}
+      </div>
+
+      <BottomNav />
+    </div>
+  );
+};
+
+export default Discover;
