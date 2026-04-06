@@ -29,6 +29,7 @@ const App = () => (
             <Route path="/upload" element={<Upload />} />
             <Route path="/profile/:username" element={<Profile />} />
             <Route path="/discover" element={<Discover />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
