@@ -15,9 +15,12 @@ interface ReelThumb {
   views_count: number;
   likes_count: number;
   category: string;
-  profiles: {
-    username: string;
-  };
+  hashtags: string[];
+  user_id: string;
+}
+
+interface ProfileMap {
+  [userId: string]: { username: string };
 }
 
 const Discover = () => {
@@ -25,12 +28,13 @@ const Discover = () => {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [reels, setReels] = useState<ReelThumb[]>([]);
+  const [profiles, setProfiles] = useState<ProfileMap>({});
 
   useEffect(() => {
     const fetchReels = async () => {
       let query = supabase
         .from('reels')
-        .select('id, title, thumbnail_url, video_url, views_count, likes_count, category, profiles!reels_user_id_fkey(username)')
+        .select('id, title, thumbnail_url, video_url, views_count, likes_count, category, hashtags, user_id')
         .order('views_count', { ascending: false })
         .limit(30);
 
@@ -42,7 +46,20 @@ const Discover = () => {
       }
 
       const { data } = await query;
-      setReels((data as unknown as ReelThumb[]) || []);
+      const reelsData = (data || []) as ReelThumb[];
+      setReels(reelsData);
+
+      // Fetch profiles for these reels
+      const userIds = [...new Set(reelsData.map(r => r.user_id))];
+      if (userIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, username')
+          .in('user_id', userIds);
+        const map: ProfileMap = {};
+        profilesData?.forEach(p => { map[p.user_id] = { username: p.username }; });
+        setProfiles(map);
+      }
     };
     fetchReels();
   }, [selectedCategory, search]);
@@ -84,24 +101,47 @@ const Discover = () => {
           </div>
         )}
         <div className="grid grid-cols-2 gap-1">
-          {reels.map((reel) => (
-            <button
-              key={reel.id}
-              onClick={() => navigate('/feed')}
-              className="aspect-[9/16] bg-muted relative overflow-hidden rounded-lg"
-            >
-              {reel.thumbnail_url ? (
-                <img src={reel.thumbnail_url} className="w-full h-full object-cover" alt={reel.title} />
-              ) : (
-                <video src={reel.video_url} className="w-full h-full object-cover" muted preload="metadata" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 to-transparent" />
-              <div className="absolute bottom-2 left-2 right-2">
-                <p className="text-primary-foreground text-xs font-medium line-clamp-2">{reel.title}</p>
-                <p className="text-primary-foreground/70 text-[10px] mt-0.5">@{reel.profiles.username}</p>
-              </div>
-            </button>
-          ))}
+          {reels.map((reel) => {
+            const profile = profiles[reel.user_id];
+            return (
+              <button
+                key={reel.id}
+                onClick={() => navigate('/feed')}
+                className="aspect-[9/16] bg-muted relative overflow-hidden rounded-lg"
+              >
+                {reel.thumbnail_url ? (
+                  <img src={reel.thumbnail_url} className="w-full h-full object-cover" alt={reel.title} />
+                ) : (
+                  <video src={reel.video_url} className="w-full h-full object-cover" muted preload="metadata" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 to-transparent" />
+                <div className="absolute bottom-2 left-2 right-2">
+                  <p className="text-primary-foreground text-xs font-medium line-clamp-2">{reel.title}</p>
+                  {profile && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/profile/${profile.username}`); }}
+                      className="text-primary-foreground/70 text-[10px] mt-0.5 hover:underline"
+                    >
+                      @{profile.username}
+                    </button>
+                  )}
+                  {reel.hashtags && reel.hashtags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {reel.hashtags.slice(0, 3).map(tag => (
+                        <button
+                          key={tag}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/hashtag/${tag}`); }}
+                          className="text-blue-400 text-[10px] font-medium"
+                        >
+                          #{tag}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
         </div>
         {reels.length === 0 && (
           <p className="text-center text-muted-foreground py-12">No PodReels found</p>

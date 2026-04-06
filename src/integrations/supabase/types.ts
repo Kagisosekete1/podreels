@@ -145,6 +145,7 @@ export type Database = {
           created_at: string
           description: string | null
           duration_seconds: number
+          hashtags: string[] | null
           id: string
           likes_count: number
           podcast_name: string | null
@@ -161,6 +162,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           duration_seconds?: number
+          hashtags?: string[] | null
           id?: string
           likes_count?: number
           podcast_name?: string | null
@@ -177,6 +179,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           duration_seconds?: number
+          hashtags?: string[] | null
           id?: string
           likes_count?: number
           podcast_name?: string | null
@@ -187,7 +190,44 @@ export type Database = {
           video_url?: string
           views_count?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "reels_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      saved_reels: {
+        Row: {
+          created_at: string
+          id: string
+          reel_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reel_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reel_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_reels_reel_id_fkey"
+            columns: ["reel_id"]
+            isOneToOne: false
+            referencedRelation: "reels"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

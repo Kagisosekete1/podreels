@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Upload as UploadIcon, Loader2, Film } from 'lucide-react';
+import { ArrowLeft, Upload as UploadIcon, Loader2, Film, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import BottomNav from '@/components/BottomNav';
 
@@ -26,23 +26,41 @@ const Upload = () => {
   const [podcastName, setPodcastName] = useState('');
   const [category, setCategory] = useState('General');
   const [uploading, setUploading] = useState(false);
+  const [hashtagInput, setHashtagInput] = useState('');
+  const [hashtags, setHashtags] = useState<string[]>([]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
-
     if (!f.type.startsWith('video/')) {
       toast({ title: 'Please select a video file', variant: 'destructive' });
       return;
     }
-
     if (f.size > 100 * 1024 * 1024) {
       toast({ title: 'File too large (max 100MB)', variant: 'destructive' });
       return;
     }
-
     setFile(f);
     setPreview(URL.createObjectURL(f));
+  };
+
+  const addHashtag = () => {
+    const tag = hashtagInput.trim().replace(/^#/, '').toLowerCase();
+    if (tag && !hashtags.includes(tag) && hashtags.length < 10) {
+      setHashtags([...hashtags, tag]);
+      setHashtagInput('');
+    }
+  };
+
+  const removeHashtag = (tag: string) => {
+    setHashtags(hashtags.filter(t => t !== tag));
+  };
+
+  const handleHashtagKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addHashtag();
+    }
   };
 
   const handleUpload = async () => {
@@ -64,7 +82,6 @@ const Upload = () => {
 
       const { data: urlData } = supabase.storage.from('reels').getPublicUrl(filePath);
 
-      // Get video duration
       const video = document.createElement('video');
       video.src = URL.createObjectURL(file);
       const duration = await new Promise<number>((resolve) => {
@@ -85,6 +102,7 @@ const Upload = () => {
         podcast_name: podcastName.trim() || null,
         category,
         duration_seconds: duration,
+        hashtags: hashtags.length > 0 ? hashtags : [],
       });
 
       if (insertError) throw insertError;
@@ -116,7 +134,6 @@ const Upload = () => {
       </header>
 
       <div className="p-4 max-w-lg mx-auto space-y-6">
-        {/* Video upload */}
         <div
           onClick={() => fileInputRef.current?.click()}
           className="aspect-[9/16] max-h-[400px] rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors overflow-hidden"
@@ -146,6 +163,31 @@ const Upload = () => {
         <div>
           <Label htmlFor="podcast">Podcast Name</Label>
           <Input id="podcast" value={podcastName} onChange={(e) => setPodcastName(e.target.value)} placeholder="e.g. The Joe Rogan Experience" maxLength={100} />
+        </div>
+
+        <div>
+          <Label>Hashtags</Label>
+          <div className="flex gap-2">
+            <Input
+              value={hashtagInput}
+              onChange={(e) => setHashtagInput(e.target.value)}
+              onKeyDown={handleHashtagKeyDown}
+              placeholder="Type a hashtag and press Enter"
+              maxLength={30}
+            />
+            <Button type="button" variant="outline" onClick={addHashtag} size="sm">Add</Button>
+          </div>
+          {hashtags.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {hashtags.map(tag => (
+                <span key={tag} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                  #{tag}
+                  <button onClick={() => removeHashtag(tag)}><X className="w-3 h-3" /></button>
+                </span>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground mt-1">{hashtags.length}/10 hashtags</p>
         </div>
 
         <div>

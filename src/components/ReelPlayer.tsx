@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Share2, Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Play, Pause, Volume2, VolumeX, Bookmark } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import CommentsSheet from '@/components/CommentsSheet';
 
@@ -15,6 +15,7 @@ interface ReelPlayerProps {
     likes_count: number;
     comments_count: number;
     user_id: string;
+    hashtags?: string[];
     profiles: {
       username: string;
       display_name: string | null;
@@ -90,7 +91,6 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         onClick={togglePlay}
       />
 
-      {/* Play/Pause overlay */}
       {!isPlaying && (
         <button onClick={togglePlay} className="absolute inset-0 flex items-center justify-center z-10">
           <div className="w-16 h-16 rounded-full bg-background/30 backdrop-blur-sm flex items-center justify-center">
@@ -99,10 +99,8 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         </button>
       )}
 
-      {/* Gradient overlay bottom */}
       <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-foreground/80 to-transparent pointer-events-none" />
 
-      {/* Mute button */}
       <button
         onClick={toggleMute}
         className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-background/20 backdrop-blur-sm flex items-center justify-center"
@@ -151,10 +149,19 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
             🎙️ {reel.podcast_name}
           </p>
         )}
-        {reel.category && (
-          <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-primary/20 text-primary-foreground text-xs">
-            #{reel.category}
-          </span>
+        {/* Hashtags */}
+        {reel.hashtags && reel.hashtags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1">
+            {reel.hashtags.map(tag => (
+              <button
+                key={tag}
+                onClick={(e) => { e.stopPropagation(); navigate(`/hashtag/${tag}`); }}
+                className="text-blue-400 text-xs font-medium hover:underline"
+              >
+                #{tag}
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
