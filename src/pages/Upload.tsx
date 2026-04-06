@@ -127,7 +127,7 @@ const Upload = () => {
             <>
               <Film className="w-12 h-12 text-muted-foreground mb-3" />
               <p className="text-sm font-medium text-muted-foreground">Tap to select video</p>
-              <p className="text-xs text-muted-foreground mt-1">Min 2 minutes • Max 100MB</p>
+              <p className="text-xs text-muted-foreground mt-1">Max 2 minutes • Max 100MB</p>
             </>
           )}
         </div>
