@@ -71,8 +71,8 @@ const Upload = () => {
         video.onloadedmetadata = () => resolve(Math.round(video.duration));
       });
 
-      if (duration < 120) {
-        toast({ title: 'PodReels must be at least 2 minutes long', variant: 'destructive' });
+      if (duration > 120) {
+        toast({ title: 'PodReels must be 2 minutes or less', variant: 'destructive' });
         setUploading(false);
         return;
       }
