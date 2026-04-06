@@ -19,6 +19,7 @@ interface ReelWithProfile {
   comments_count: number;
   user_id: string;
   created_at: string;
+  hashtags: string[];
   profiles: {
     username: string;
     display_name: string | null;
@@ -35,33 +36,40 @@ const Feed = () => {
   const [likedReels, setLikedReels] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const fetchReels = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('reels')
+      .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster)')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (!error && data) {
+      setReels(data as unknown as ReelWithProfile[]);
+    }
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
-    const fetchReels = async () => {
-      const { data, error } = await supabase
-        .from('reels')
-        .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster)')
-        .order('created_at', { ascending: false })
-        .limit(20);
-
-      if (!error && data) {
-        setReels(data as unknown as ReelWithProfile[]);
-      }
-      setLoading(false);
-    };
-
-    const fetchLikedReels = async () => {
-      if (!user) return;
-      const { data } = await supabase
-        .from('likes')
-        .select('reel_id')
-        .eq('user_id', user.id);
-      if (data) {
-        setLikedReels(new Set(data.map(l => l.reel_id)));
-      }
-    };
-
     fetchReels();
-    fetchLikedReels();
+
+    // Realtime subscription
+    const channel = supabase
+      .channel('reels-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reels' }, () => {
+        fetchReels();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchReels]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchLikes = async () => {
+      const { data } = await supabase.from('likes').select('reel_id').eq('user_id', user.id);
+      if (data) setLikedReels(new Set(data.map(l => l.reel_id)));
+    };
+    fetchLikes();
   }, [user]);
 
   const handleScroll = useCallback(() => {
@@ -77,15 +85,17 @@ const Feed = () => {
   const toggleLike = async (reelId: string) => {
     if (!user) return;
     const isLiked = likedReels.has(reelId);
+    const reel = reels.find(r => r.id === reelId);
+    if (!reel) return;
 
     if (isLiked) {
       setLikedReels(prev => { const n = new Set(prev); n.delete(reelId); return n; });
       await supabase.from('likes').delete().eq('user_id', user.id).eq('reel_id', reelId);
-      await supabase.from('reels').update({ likes_count: reels.find(r => r.id === reelId)!.likes_count - 1 }).eq('id', reelId);
+      await supabase.from('reels').update({ likes_count: Math.max(0, reel.likes_count - 1) }).eq('id', reelId);
     } else {
       setLikedReels(prev => new Set(prev).add(reelId));
       await supabase.from('likes').insert({ user_id: user.id, reel_id: reelId });
-      await supabase.from('reels').update({ likes_count: reels.find(r => r.id === reelId)!.likes_count + 1 }).eq('id', reelId);
+      await supabase.from('reels').update({ likes_count: reel.likes_count + 1 }).eq('id', reelId);
     }
   };
 
@@ -116,6 +126,10 @@ const Feed = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background">
+      {/* Header like Facebook Reels */}
+      <div className="absolute top-0 left-0 right-0 z-30 px-4 pt-4 pb-2">
+        <h1 className="text-primary-foreground text-xl font-black drop-shadow-lg">PodReels</h1>
+      </div>
       <div
         ref={containerRef}
         onScroll={handleScroll}

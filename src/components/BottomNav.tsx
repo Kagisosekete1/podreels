@@ -8,7 +8,7 @@ const BottomNav = () => {
   const { profile } = useAuth();
 
   const items = [
-    { icon: Home, label: 'Home', path: '/feed' },
+    { icon: Home, label: 'PodReels', path: '/feed' },
     { icon: Search, label: 'Discover', path: '/discover' },
     { icon: PlusCircle, label: 'Upload', path: '/upload', special: true },
     { icon: User, label: 'Profile', path: profile ? `/profile/${profile.username}` : '/auth' },
