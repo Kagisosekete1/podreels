@@ -41,7 +41,7 @@ const Auth = () => {
           },
         });
         if (error) throw error;
-        toast({ title: 'Account created! Check your email to confirm.' });
+        toast({ title: 'Account created! Welcome to PodReels 🎙️' });
         navigate('/feed');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
