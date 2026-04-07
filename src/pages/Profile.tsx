@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Settings, Grid3X3, Bookmark, AtSign, Loader2, Camera, Check, X } from 'lucide-react';
+import { ArrowLeft, Grid3X3, Bookmark, AtSign, Loader2, Camera, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import BottomNav from '@/components/BottomNav';
 
