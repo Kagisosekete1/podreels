@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Settings, Grid3X3, Bookmark, AtSign, Loader2, Camera, Check, X } from 'lucide-react';
+import { ArrowLeft, Grid3X3, Bookmark, AtSign, Loader2, Camera, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 import BottomNav from '@/components/BottomNav';
 
@@ -256,9 +256,7 @@ const Profile = () => {
         <div className="flex items-center justify-between h-14 px-4">
           <button onClick={() => navigate(-1)}><ArrowLeft className="w-6 h-6" /></button>
           <h1 className="text-lg font-bold">@{profileData.username}</h1>
-          {isOwnProfile ? (
-            <button onClick={() => navigate('/settings')}><Settings className="w-5 h-5" /></button>
-          ) : <div className="w-5" />}
+          <div className="w-5" />
         </div>
       </header>
 
