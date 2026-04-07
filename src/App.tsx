@@ -12,6 +12,7 @@ import Profile from "./pages/Profile";
 import Discover from "./pages/Discover";
 import Settings from "./pages/Settings";
 import HashtagFeed from "./pages/HashtagFeed";
+import ProfileFeed from "./pages/ProfileFeed";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
