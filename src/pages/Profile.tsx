@@ -256,9 +256,7 @@ const Profile = () => {
         <div className="flex items-center justify-between h-14 px-4">
           <button onClick={() => navigate(-1)}><ArrowLeft className="w-6 h-6" /></button>
           <h1 className="text-lg font-bold">@{profileData.username}</h1>
-          {isOwnProfile ? (
-            <button onClick={() => navigate('/settings')}><Settings className="w-5 h-5" /></button>
-          ) : <div className="w-5" />}
+          <div className="w-5" />
         </div>
       </header>
 

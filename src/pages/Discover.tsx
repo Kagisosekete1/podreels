@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
-import { Search, TrendingUp } from 'lucide-react';
+import { Search, TrendingUp, Hash, Fire } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 
-const CATEGORIES = ['All', 'Comedy', 'True Crime', 'Tech', 'Business', 'Health', 'Education', 'News', 'Sports', 'Music', 'Lifestyle', 'Science'];
+const BASE_CATEGORIES = ['All', 'Comedy', 'True Crime', 'Tech', 'Business', 'Health', 'Education', 'News', 'Sports', 'Music', 'Lifestyle', 'Science', 'Other'];
 
 interface ReelThumb {
   id: string;
@@ -29,17 +29,23 @@ const Discover = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [reels, setReels] = useState<ReelThumb[]>([]);
   const [profiles, setProfiles] = useState<ProfileMap>({});
+  const [trendingHashtags, setTrendingHashtags] = useState<{ tag: string; count: number }[]>([]);
+  const [dynamicCategories, setDynamicCategories] = useState<string[]>([]);
 
   useEffect(() => {
-    const fetchReels = async () => {
+    const fetchAll = async () => {
+      // Fetch reels
       let query = supabase
         .from('reels')
         .select('id, title, thumbnail_url, video_url, views_count, likes_count, category, hashtags, user_id')
         .order('views_count', { ascending: false })
         .limit(30);
 
-      if (selectedCategory !== 'All') {
+      if (selectedCategory !== 'All' && selectedCategory !== 'Other') {
         query = query.eq('category', selectedCategory);
+      }
+      if (selectedCategory === 'Other') {
+        query = query.not('category', 'in', `(${BASE_CATEGORIES.filter(c => c !== 'All' && c !== 'Other').join(',')})`);
       }
       if (search.trim()) {
         query = query.ilike('title', `%${search.trim()}%`);
@@ -49,7 +55,7 @@ const Discover = () => {
       const reelsData = (data || []) as ReelThumb[];
       setReels(reelsData);
 
-      // Fetch profiles for these reels
+      // Profiles
       const userIds = [...new Set(reelsData.map(r => r.user_id))];
       if (userIds.length > 0) {
         const { data: profilesData } = await supabase
@@ -60,9 +66,36 @@ const Discover = () => {
         profilesData?.forEach(p => { map[p.user_id] = { username: p.username }; });
         setProfiles(map);
       }
+
+      // Trending hashtags from all reels
+      const { data: allReels } = await supabase
+        .from('reels')
+        .select('hashtags, category')
+        .not('hashtags', 'is', null)
+        .limit(200);
+
+      if (allReels) {
+        const tagCount: Record<string, number> = {};
+        const catSet = new Set<string>();
+        allReels.forEach(r => {
+          if (r.category) catSet.add(r.category);
+          (r.hashtags as string[] || []).forEach(t => {
+            tagCount[t] = (tagCount[t] || 0) + 1;
+          });
+        });
+        const sorted = Object.entries(tagCount).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([tag, count]) => ({ tag, count }));
+        setTrendingHashtags(sorted);
+
+        // Dynamic categories from popular reels not in base list
+        const baseSet = new Set(BASE_CATEGORIES.map(c => c.toLowerCase()));
+        const extra = [...catSet].filter(c => !baseSet.has(c.toLowerCase()));
+        setDynamicCategories(extra.slice(0, 5));
+      }
     };
-    fetchReels();
+    fetchAll();
   }, [selectedCategory, search]);
+
+  const allCategories = [...BASE_CATEGORIES, ...dynamicCategories.filter(c => !BASE_CATEGORIES.includes(c))];
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -77,7 +110,7 @@ const Discover = () => {
           />
         </div>
         <div className="flex gap-2 overflow-x-auto hide-scrollbar">
-          {CATEGORIES.map(cat => (
+          {allCategories.map(cat => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
@@ -93,11 +126,32 @@ const Discover = () => {
         </div>
       </div>
 
+      {/* Trending Hashtags */}
+      {trendingHashtags.length > 0 && !search.trim() && selectedCategory === 'All' && (
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Hash className="w-4 h-4 text-accent" />
+            <span className="text-sm font-semibold">Trending Hashtags</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {trendingHashtags.map(({ tag, count }) => (
+              <button
+                key={tag}
+                onClick={() => navigate(`/hashtag/${tag}`)}
+                className="px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium"
+              >
+                #{tag} <span className="text-muted-foreground ml-1">{count}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="p-2">
         {reels.length > 0 && (
           <div className="flex items-center gap-2 px-2 py-3">
             <TrendingUp className="w-4 h-4 text-accent" />
-            <span className="text-sm font-semibold">Trending PodReels</span>
+            <span className="text-sm font-semibold">Popular PodReels</span>
           </div>
         )}
         <div className="grid grid-cols-2 gap-1">

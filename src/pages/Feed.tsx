@@ -28,6 +28,16 @@ interface ReelWithProfile {
   };
 }
 
+// Fisher-Yates shuffle
+const shuffle = <T,>(arr: T[]): T[] => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
 const Feed = () => {
   const { user } = useAuth();
   const [reels, setReels] = useState<ReelWithProfile[]>([]);
@@ -41,25 +51,22 @@ const Feed = () => {
       .from('reels')
       .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster)')
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(50);
 
     if (!error && data) {
-      setReels(data as unknown as ReelWithProfile[]);
+      setReels(shuffle(data as unknown as ReelWithProfile[]));
     }
     setLoading(false);
   }, []);
 
   useEffect(() => {
     fetchReels();
-
-    // Realtime subscription
     const channel = supabase
       .channel('reels-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reels' }, () => {
         fetchReels();
       })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [fetchReels]);
 
@@ -126,9 +133,9 @@ const Feed = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      {/* Header like Facebook Reels */}
+      {/* Header - 40% opacity */}
       <div className="absolute top-0 left-0 right-0 z-30 px-4 pt-4 pb-2">
-        <h1 className="text-primary-foreground text-xl font-black drop-shadow-lg">PodReels</h1>
+        <h1 className="text-primary-foreground/40 text-lg font-black drop-shadow-lg">PodReels</h1>
       </div>
       <div
         ref={containerRef}

@@ -6,25 +6,24 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Upload as UploadIcon, Loader2, Film, X } from 'lucide-react';
+import { ArrowLeft, Upload as UploadIcon, Loader2, Film, X, ImagePlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import BottomNav from '@/components/BottomNav';
 
-const CATEGORIES = ['Comedy', 'True Crime', 'Tech', 'Business', 'Health', 'Education', 'News', 'Sports', 'Music', 'Lifestyle', 'Science', 'General'];
-
 const Upload = () => {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const thumbInputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [podcastName, setPodcastName] = useState('');
-  const [category, setCategory] = useState('General');
+  const [category, setCategory] = useState('');
   const [uploading, setUploading] = useState(false);
   const [hashtagInput, setHashtagInput] = useState('');
   const [hashtags, setHashtags] = useState<string[]>([]);
@@ -42,6 +41,22 @@ const Upload = () => {
     }
     setFile(f);
     setPreview(URL.createObjectURL(f));
+  };
+
+  const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    if (!allowed.includes(f.type)) {
+      toast({ title: 'Thumbnail must be JPG, PNG, or WebP', variant: 'destructive' });
+      return;
+    }
+    if (f.size > 5 * 1024 * 1024) {
+      toast({ title: 'Thumbnail too large (max 5MB)', variant: 'destructive' });
+      return;
+    }
+    setThumbnailFile(f);
+    setThumbnailPreview(URL.createObjectURL(f));
   };
 
   const addHashtag = () => {
@@ -94,13 +109,25 @@ const Upload = () => {
         return;
       }
 
+      // Upload thumbnail if provided
+      let thumbnailUrl: string | null = null;
+      if (thumbnailFile) {
+        const thumbExt = thumbnailFile.name.split('.').pop();
+        const thumbPath = `${user.id}/thumb_${Date.now()}.${thumbExt}`;
+        const { error: thumbErr } = await supabase.storage.from('reels').upload(thumbPath, thumbnailFile, { contentType: thumbnailFile.type });
+        if (!thumbErr) {
+          const { data: thumbUrl } = supabase.storage.from('reels').getPublicUrl(thumbPath);
+          thumbnailUrl = thumbUrl.publicUrl;
+        }
+      }
+
       const { error: insertError } = await supabase.from('reels').insert({
         user_id: user.id,
         title: title.trim(),
         description: description.trim() || null,
         video_url: urlData.publicUrl,
-        podcast_name: podcastName.trim() || null,
-        category,
+        thumbnail_url: thumbnailUrl,
+        category: category.trim() || 'General',
         duration_seconds: duration,
         hashtags: hashtags.length > 0 ? hashtags : [],
       });
@@ -133,10 +160,10 @@ const Upload = () => {
         </div>
       </header>
 
-      <div className="p-4 max-w-lg mx-auto space-y-6">
+      <div className="p-4 max-w-lg mx-auto space-y-5">
         <div
           onClick={() => fileInputRef.current?.click()}
-          className="aspect-[9/16] max-h-[400px] rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors overflow-hidden"
+          className="aspect-[9/16] max-h-[350px] rounded-2xl border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors overflow-hidden"
         >
           {preview ? (
             <video src={preview} className="w-full h-full object-cover rounded-2xl" controls />
@@ -150,6 +177,25 @@ const Upload = () => {
         </div>
         <input ref={fileInputRef} type="file" accept="video/*" className="hidden" onChange={handleFileChange} />
 
+        {/* Thumbnail */}
+        <div>
+          <Label>Thumbnail (optional)</Label>
+          <div
+            onClick={() => thumbInputRef.current?.click()}
+            className="mt-1 h-24 w-40 rounded-xl border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-primary transition-colors overflow-hidden"
+          >
+            {thumbnailPreview ? (
+              <img src={thumbnailPreview} className="w-full h-full object-cover" alt="Thumbnail" />
+            ) : (
+              <div className="flex flex-col items-center">
+                <ImagePlus className="w-6 h-6 text-muted-foreground" />
+                <p className="text-[10px] text-muted-foreground mt-1">JPG, PNG, WebP</p>
+              </div>
+            )}
+          </div>
+          <input ref={thumbInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleThumbnailChange} />
+        </div>
+
         <div>
           <Label htmlFor="title">Title *</Label>
           <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What's this clip about?" maxLength={100} />
@@ -158,11 +204,6 @@ const Upload = () => {
         <div>
           <Label htmlFor="description">Description</Label>
           <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Add a description..." rows={3} maxLength={500} />
-        </div>
-
-        <div>
-          <Label htmlFor="podcast">Podcast Name</Label>
-          <Input id="podcast" value={podcastName} onChange={(e) => setPodcastName(e.target.value)} placeholder="e.g. The Joe Rogan Experience" maxLength={100} />
         </div>
 
         <div>
@@ -191,13 +232,8 @@ const Upload = () => {
         </div>
 
         <div>
-          <Label>Category</Label>
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="category">Category</Label>
+          <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Comedy, Tech, True Crime..." maxLength={30} />
         </div>
 
         <Button
