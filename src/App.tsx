@@ -30,6 +30,7 @@ const App = () => (
             <Route path="/feed" element={<Feed />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/profile/:username" element={<Profile />} />
+            <Route path="/profile/:username/reel/:reelId" element={<ProfileFeed />} />
             <Route path="/discover" element={<Discover />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/hashtag/:tag" element={<HashtagFeed />} />

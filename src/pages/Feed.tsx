@@ -135,7 +135,7 @@ const Feed = () => {
     <div className="h-screen flex flex-col bg-background">
       {/* Header - 40% opacity */}
       <div className="absolute top-0 left-0 right-0 z-30 px-4 pt-4 pb-2">
-        <h1 className="text-primary-foreground/40 text-lg font-black drop-shadow-lg">PodReels</h1>
+        <img src="/podreels-logo.png" alt="PodReels" className="w-8 h-8 opacity-40 drop-shadow-lg" />
       </div>
       <div
         ref={containerRef}
