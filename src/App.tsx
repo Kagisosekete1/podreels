@@ -12,6 +12,7 @@ import Profile from "./pages/Profile";
 import Discover from "./pages/Discover";
 import Settings from "./pages/Settings";
 import HashtagFeed from "./pages/HashtagFeed";
+import ProfileFeed from "./pages/ProfileFeed";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/feed" element={<Feed />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/profile/:username" element={<Profile />} />
+            <Route path="/profile/:username/reel/:reelId" element={<ProfileFeed />} />
             <Route path="/discover" element={<Discover />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/hashtag/:tag" element={<HashtagFeed />} />

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Upload as UploadIcon, Loader2, Film, X, ImagePlus } from 'lucide-react';
+import { ArrowLeft, Upload as UploadIcon, Loader2, Film, ImagePlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import BottomNav from '@/components/BottomNav';
 
@@ -25,8 +25,8 @@ const Upload = () => {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [hashtagInput, setHashtagInput] = useState('');
-  const [hashtags, setHashtags] = useState<string[]>([]);
+
+  const wordCount = description.trim().split(/\s+/).filter(Boolean).length;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -59,28 +59,21 @@ const Upload = () => {
     setThumbnailPreview(URL.createObjectURL(f));
   };
 
-  const addHashtag = () => {
-    const tag = hashtagInput.trim().replace(/^#/, '').toLowerCase();
-    if (tag && !hashtags.includes(tag) && hashtags.length < 10) {
-      setHashtags([...hashtags, tag]);
-      setHashtagInput('');
-    }
-  };
-
-  const removeHashtag = (tag: string) => {
-    setHashtags(hashtags.filter(t => t !== tag));
-  };
-
-  const handleHashtagKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      addHashtag();
-    }
+  // Extract hashtags from description
+  const extractHashtags = (text: string): string[] => {
+    const matches = text.match(/#(\w+)/g);
+    if (!matches) return [];
+    return [...new Set(matches.map(m => m.slice(1).toLowerCase()))].slice(0, 10);
   };
 
   const handleUpload = async () => {
     if (!file || !user || !title.trim()) {
       toast({ title: 'Please fill in required fields', variant: 'destructive' });
+      return;
+    }
+
+    if (wordCount < 100) {
+      toast({ title: 'Description must be at least 100 words', variant: 'destructive' });
       return;
     }
 
@@ -109,7 +102,6 @@ const Upload = () => {
         return;
       }
 
-      // Upload thumbnail if provided
       let thumbnailUrl: string | null = null;
       if (thumbnailFile) {
         const thumbExt = thumbnailFile.name.split('.').pop();
@@ -120,6 +112,8 @@ const Upload = () => {
           thumbnailUrl = thumbUrl.publicUrl;
         }
       }
+
+      const hashtags = extractHashtags(description);
 
       const { error: insertError } = await supabase.from('reels').insert({
         user_id: user.id,
@@ -202,33 +196,18 @@ const Upload = () => {
         </div>
 
         <div>
-          <Label htmlFor="description">Description</Label>
-          <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Add a description..." rows={3} maxLength={500} />
-        </div>
-
-        <div>
-          <Label>Hashtags</Label>
-          <div className="flex gap-2">
-            <Input
-              value={hashtagInput}
-              onChange={(e) => setHashtagInput(e.target.value)}
-              onKeyDown={handleHashtagKeyDown}
-              placeholder="Type a hashtag and press Enter"
-              maxLength={30}
-            />
-            <Button type="button" variant="outline" onClick={addHashtag} size="sm">Add</Button>
-          </div>
-          {hashtags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mt-2">
-              {hashtags.map(tag => (
-                <span key={tag} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                  #{tag}
-                  <button onClick={() => removeHashtag(tag)}><X className="w-3 h-3" /></button>
-                </span>
-              ))}
-            </div>
-          )}
-          <p className="text-xs text-muted-foreground mt-1">{hashtags.length}/10 hashtags</p>
+          <Label htmlFor="description">Description * <span className="text-muted-foreground font-normal">(min 100 words)</span></Label>
+          <Textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Write about your PodReel... Add #hashtags inline like #podcast #comedy"
+            rows={5}
+            maxLength={2000}
+          />
+          <p className={`text-xs mt-1 ${wordCount < 100 ? 'text-destructive' : 'text-muted-foreground'}`}>
+            {wordCount}/100 words minimum
+          </p>
         </div>
 
         <div>
@@ -238,7 +217,7 @@ const Upload = () => {
 
         <Button
           onClick={handleUpload}
-          disabled={uploading || !file || !title.trim()}
+          disabled={uploading || !file || !title.trim() || wordCount < 100}
           className="w-full h-12 gradient-primary text-primary-foreground font-semibold"
         >
           {uploading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <UploadIcon className="w-5 h-5 mr-2" />}

@@ -32,6 +32,30 @@ interface ReelPlayerProps {
   onToggleLike: () => void;
 }
 
+// Parse description to render hashtags as clickable blue links
+const DescriptionText = ({ text, navigate }: { text: string; navigate: (path: string) => void }) => {
+  const parts = text.split(/(#\w+)/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith('#') && part.length > 1) {
+          const tag = part.slice(1);
+          return (
+            <button
+              key={i}
+              onClick={(e) => { e.stopPropagation(); navigate(`/hashtag/${tag}`); }}
+              className="text-blue-400 font-medium"
+            >
+              {part}
+            </button>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+};
+
 const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -39,6 +63,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
   const [isPlaying, setIsPlaying] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -55,18 +80,14 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
       setIsPlaying(false);
+      setExpanded(false);
     }
   }, [isActive]);
 
   const togglePlay = () => {
     if (!videoRef.current) return;
-    if (isPlaying) {
-      videoRef.current.pause();
-      setIsPlaying(false);
-    } else {
-      videoRef.current.play();
-      setIsPlaying(true);
-    }
+    if (isPlaying) { videoRef.current.pause(); setIsPlaying(false); }
+    else { videoRef.current.play(); setIsPlaying(true); }
   };
 
   const handleShare = async () => {
@@ -103,6 +124,8 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
     return n.toString();
   };
 
+  const descriptionText = reel.description || '';
+
   return (
     <div className="h-screen w-full relative snap-start bg-foreground/95 flex items-center justify-center" style={{ scrollSnapAlign: 'start' }}>
       <video
@@ -124,7 +147,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
 
       <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-foreground/80 to-transparent pointer-events-none" />
 
-      {/* Right side actions - smaller and refined */}
+      {/* Right side actions */}
       <div className="absolute right-2 bottom-32 flex flex-col items-center gap-4 z-20">
         <button onClick={() => navigate(`/profile/${reel.profiles.username}`)} className="mb-1">
           <Avatar className="w-9 h-9 border-[1.5px] border-primary">
@@ -168,7 +191,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         )}
       </div>
 
-      {/* Bottom info - moved up with description and hashtags */}
+      {/* Bottom info */}
       <div className="absolute bottom-24 left-3 right-14 z-20">
         <button onClick={() => navigate(`/profile/${reel.profiles.username}`)} className="flex items-center gap-1.5 mb-1.5">
           <span className="text-primary-foreground font-semibold text-xs">@{reel.profiles.username}</span>
@@ -177,22 +200,31 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
           )}
         </button>
         <p className="text-primary-foreground text-xs font-medium mb-0.5 line-clamp-1">{reel.title}</p>
-        {reel.description && (
-          <p className="text-primary-foreground/70 text-[10px] mb-1 line-clamp-2">{reel.description}</p>
-        )}
-        {reel.hashtags && reel.hashtags.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-1">
-            {reel.hashtags.map(tag => (
-              <button
-                key={tag}
-                onClick={(e) => { e.stopPropagation(); navigate(`/hashtag/${tag}`); }}
-                className="text-blue-400 text-[10px] font-medium"
-              >
-                #{tag}
-              </button>
-            ))}
+
+        {descriptionText && (
+          <div className="mb-1">
+            {expanded ? (
+              <div className="text-primary-foreground/70 text-[10px] leading-relaxed">
+                <DescriptionText text={descriptionText} navigate={navigate} />
+                <button onClick={() => setExpanded(false)} className="text-primary-foreground/90 font-semibold ml-1">
+                  See less
+                </button>
+              </div>
+            ) : (
+              <div className="text-primary-foreground/70 text-[10px]">
+                <span className="line-clamp-1">
+                  <DescriptionText text={descriptionText} navigate={navigate} />
+                </span>
+                {descriptionText.length > 60 && (
+                  <button onClick={() => setExpanded(true)} className="text-primary-foreground/90 font-semibold">
+                    See more
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
+
         <div className="flex items-center gap-1 mt-0.5">
           <Eye className="w-3 h-3 text-primary-foreground/50" />
           <span className="text-primary-foreground/50 text-[10px]">{formatCount(reel.views_count)} views</span>

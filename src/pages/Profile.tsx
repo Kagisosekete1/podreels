@@ -373,7 +373,7 @@ const Profile = () => {
               {displayReels.map((reel) => (
                 <button
                   key={reel.id}
-                  onClick={() => navigate('/feed')}
+                  onClick={() => navigate(`/profile/${profileData.username}/reel/${reel.id}`)}
                   className="aspect-[9/16] bg-muted relative overflow-hidden"
                 >
                   {reel.thumbnail_url ? (
