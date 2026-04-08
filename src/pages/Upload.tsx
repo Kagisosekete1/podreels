@@ -72,10 +72,6 @@ const Upload = () => {
       return;
     }
 
-    if (wordCount < 100) {
-      toast({ title: 'Description must be at least 100 words', variant: 'destructive' });
-      return;
-    }
 
     setUploading(true);
     try {
