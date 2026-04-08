@@ -96,6 +96,47 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          actor_id: string
+          content: string | null
+          created_at: string
+          id: string
+          read: boolean
+          reel_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          actor_id: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          read?: boolean
+          reel_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          actor_id?: string
+          content?: string | null
+          created_at?: string
+          id?: string
+          read?: boolean
+          reel_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_reel_id_fkey"
+            columns: ["reel_id"]
+            isOneToOne: false
+            referencedRelation: "reels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

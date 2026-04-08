@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import AppLayout from "@/components/AppLayout";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Feed from "./pages/Feed";
@@ -13,6 +14,7 @@ import Discover from "./pages/Discover";
 import Settings from "./pages/Settings";
 import HashtagFeed from "./pages/HashtagFeed";
 import ProfileFeed from "./pages/ProfileFeed";
+import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,18 +26,21 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/feed" element={<Feed />} />
-            <Route path="/upload" element={<Upload />} />
-            <Route path="/profile/:username" element={<Profile />} />
-            <Route path="/profile/:username/reel/:reelId" element={<ProfileFeed />} />
-            <Route path="/discover" element={<Discover />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/hashtag/:tag" element={<HashtagFeed />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppLayout>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/feed" element={<Feed />} />
+              <Route path="/upload" element={<Upload />} />
+              <Route path="/profile/:username" element={<Profile />} />
+              <Route path="/profile/:username/reel/:reelId" element={<ProfileFeed />} />
+              <Route path="/discover" element={<Discover />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/hashtag/:tag" element={<HashtagFeed />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AppLayout>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

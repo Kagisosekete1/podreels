@@ -26,7 +26,7 @@ const Upload = () => {
   const [category, setCategory] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  const wordCount = description.trim().split(/\s+/).filter(Boolean).length;
+  const wordCount = description.trim() ? description.trim().split(/\s+/).filter(Boolean).length : 0;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -72,10 +72,6 @@ const Upload = () => {
       return;
     }
 
-    if (wordCount < 100) {
-      toast({ title: 'Description must be at least 100 words', variant: 'destructive' });
-      return;
-    }
 
     setUploading(true);
     try {
@@ -196,7 +192,7 @@ const Upload = () => {
         </div>
 
         <div>
-          <Label htmlFor="description">Description * <span className="text-muted-foreground font-normal">(min 100 words)</span></Label>
+          <Label htmlFor="description">Description <span className="text-muted-foreground font-normal">(add #hashtags inline)</span></Label>
           <Textarea
             id="description"
             value={description}
@@ -205,8 +201,8 @@ const Upload = () => {
             rows={5}
             maxLength={2000}
           />
-          <p className={`text-xs mt-1 ${wordCount < 100 ? 'text-destructive' : 'text-muted-foreground'}`}>
-            {wordCount}/100 words minimum
+          <p className="text-xs mt-1 text-muted-foreground">
+            {wordCount} words
           </p>
         </div>
 
@@ -217,7 +213,7 @@ const Upload = () => {
 
         <Button
           onClick={handleUpload}
-          disabled={uploading || !file || !title.trim() || wordCount < 100}
+          disabled={uploading || !file || !title.trim()}
           className="w-full h-12 gradient-primary text-primary-foreground font-semibold"
         >
           {uploading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <UploadIcon className="w-5 h-5 mr-2" />}
