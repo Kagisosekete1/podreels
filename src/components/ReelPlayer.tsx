@@ -32,7 +32,6 @@ interface ReelPlayerProps {
   onToggleLike: () => void;
 }
 
-// Parse description to render hashtags as clickable blue links
 const DescriptionText = ({ text, navigate }: { text: string; navigate: (path: string) => void }) => {
   const parts = text.split(/(#\w+)/g);
   return (
@@ -64,25 +63,40 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
   const [showComments, setShowComments] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [viewCount, setViewCount] = useState(reel.views_count);
+  const viewCounted = useRef(false);
 
   useEffect(() => {
     if (!user) return;
     supabase.from('saved_reels').select('id').eq('user_id', user.id).eq('reel_id', reel.id).maybeSingle()
       .then(({ data }) => setIsSaved(!!data));
-  }, [user, reel.id]);
+    // Check following
+    if (user.id !== reel.user_id) {
+      supabase.from('follows').select('id').eq('follower_id', user.id).eq('following_id', reel.user_id).maybeSingle()
+        .then(({ data }) => setIsFollowing(!!data));
+    }
+  }, [user, reel.id, reel.user_id]);
 
   useEffect(() => {
     if (!videoRef.current) return;
     if (isActive) {
       videoRef.current.muted = false;
       videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+      // Count view
+      if (!viewCounted.current) {
+        viewCounted.current = true;
+        supabase.rpc('increment_view', { reel_uuid: reel.id }).then(() => {
+          setViewCount(prev => prev + 1);
+        });
+      }
     } else {
       videoRef.current.pause();
       videoRef.current.currentTime = 0;
       setIsPlaying(false);
       setExpanded(false);
     }
-  }, [isActive]);
+  }, [isActive, reel.id]);
 
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -116,6 +130,17 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
     await supabase.from('reels').delete().eq('id', reel.id);
     toast.success('PodReel deleted');
     navigate('/feed');
+  };
+
+  const handleFollow = async () => {
+    if (!user || user.id === reel.user_id) return;
+    if (isFollowing) {
+      await supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', reel.user_id);
+      setIsFollowing(false);
+    } else {
+      await supabase.from('follows').insert({ follower_id: user.id, following_id: reel.user_id });
+      setIsFollowing(true);
+    }
   };
 
   const formatCount = (n: number) => {
@@ -193,12 +218,26 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
 
       {/* Bottom info */}
       <div className="absolute bottom-24 left-3 right-14 z-20">
-        <button onClick={() => navigate(`/profile/${reel.profiles.username}`)} className="flex items-center gap-1.5 mb-1.5">
-          <span className="text-primary-foreground font-semibold text-xs">@{reel.profiles.username}</span>
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <button onClick={() => navigate(`/profile/${reel.profiles.username}`)}>
+            <span className="text-primary-foreground font-semibold text-xs">@{reel.profiles.username}</span>
+          </button>
           {reel.profiles.is_podcaster && (
             <span className="px-1 py-0.5 text-[8px] font-bold rounded gradient-primary text-primary-foreground">PRO</span>
           )}
-        </button>
+          {user && user.id !== reel.user_id && (
+            <button
+              onClick={handleFollow}
+              className={`px-2 py-0.5 rounded-full text-[9px] font-semibold border transition-colors ${
+                isFollowing
+                  ? 'border-primary-foreground/30 text-primary-foreground/70'
+                  : 'border-primary-foreground/50 text-primary-foreground bg-primary-foreground/10'
+              }`}
+            >
+              {isFollowing ? 'Following' : 'Follow'}
+            </button>
+          )}
+        </div>
         <p className="text-primary-foreground text-xs font-medium mb-0.5 line-clamp-1">{reel.title}</p>
 
         {descriptionText && (
@@ -227,7 +266,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
 
         <div className="flex items-center gap-1 mt-0.5">
           <Eye className="w-3 h-3 text-primary-foreground/50" />
-          <span className="text-primary-foreground/50 text-[10px]">{formatCount(reel.views_count)} views</span>
+          <span className="text-primary-foreground/50 text-[10px]">{formatCount(viewCount)} views</span>
         </div>
       </div>
 

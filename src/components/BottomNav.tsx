@@ -1,24 +1,47 @@
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, PlusCircle, User, Settings, Bell } from 'lucide-react';
+import { Home, Search, PlusCircle, User, Bell } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { supabase } from '@/integrations/supabase/client';
 
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const isMobile = useIsMobile();
+  const [unreadCount, setUnreadCount] = useState(0);
 
-  // Hide on desktop since sidebar handles nav
+  useEffect(() => {
+    if (!user) return;
+    const fetchUnread = async () => {
+      const { count } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+      setUnreadCount(count || 0);
+    };
+    fetchUnread();
+
+    const channel = supabase
+      .channel('unread-notifs')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, () => {
+        setUnreadCount(prev => prev + 1);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
   if (!isMobile) return null;
 
   const items = [
-    { icon: Home, label: 'Home', path: '/feed' },
+    { icon: Home, label: 'PodReels', path: '/feed' },
     { icon: Search, label: 'Discover', path: '/discover' },
     { icon: PlusCircle, label: '', path: '/upload', special: true },
     { icon: Bell, label: 'Alerts', path: '/notifications' },
     { icon: User, label: 'Profile', path: profile ? `/profile/${profile.username}` : '/auth' },
-    { icon: Settings, label: 'Settings', path: '/settings' },
   ];
 
   return (
@@ -43,9 +66,16 @@ const BottomNav = () => {
             <button
               key={item.label}
               onClick={() => navigate(item.path)}
-              className="flex flex-col items-center gap-0.5 py-1"
+              className="flex flex-col items-center gap-0.5 py-1 relative"
             >
-              <item.icon className={`w-[20px] h-[20px] ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+              <div className="relative">
+                <item.icon className={`w-[20px] h-[20px] ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                {item.label === 'Alerts' && unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-accent text-[9px] font-bold text-accent-foreground flex items-center justify-center">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </div>
               <span className={`text-[9px] leading-none ${isActive ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
                 {item.label}
               </span>
