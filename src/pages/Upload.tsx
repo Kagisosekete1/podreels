@@ -213,7 +213,7 @@ const Upload = () => {
 
         <Button
           onClick={handleUpload}
-          disabled={uploading || !file || !title.trim() || wordCount < 100}
+          disabled={uploading || !file || !title.trim()}
           className="w-full h-12 gradient-primary text-primary-foreground font-semibold"
         >
           {uploading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <UploadIcon className="w-5 h-5 mr-2" />}
