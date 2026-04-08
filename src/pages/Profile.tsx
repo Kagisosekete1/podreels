@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Grid3X3, Bookmark, AtSign, Loader2, Camera, Check, X } from 'lucide-react';
+import { ArrowLeft, Grid3X3, Bookmark, AtSign, Loader2, Camera, Check, X, Settings, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import BottomNav from '@/components/BottomNav';
 
@@ -86,7 +86,6 @@ const Profile = () => {
         setIsFollowing(!!fData);
       }
 
-      // Fetch saved reels if own profile
       if (user && isOwnProfile) {
         const { data: saved } = await supabase
           .from('saved_reels')
@@ -107,16 +106,29 @@ const Profile = () => {
     if (username) fetchData();
   }, [username, user]);
 
+  // Realtime follower count
+  useEffect(() => {
+    if (!profileData) return;
+    const channel = supabase
+      .channel(`profile-follows-${profileData.user_id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `user_id=eq.${profileData.user_id}` }, (payload) => {
+        const newData = payload.new as any;
+        if (newData) {
+          setProfileData(prev => prev ? { ...prev, followers_count: newData.followers_count, following_count: newData.following_count } : prev);
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [profileData?.user_id]);
+
   const toggleFollow = async () => {
     if (!user || !profileData) return;
     if (isFollowing) {
       await supabase.from('follows').delete().eq('follower_id', user.id).eq('following_id', profileData.user_id);
       setIsFollowing(false);
-      setProfileData(prev => prev ? { ...prev, followers_count: Math.max(0, prev.followers_count - 1) } : prev);
     } else {
       await supabase.from('follows').insert({ follower_id: user.id, following_id: profileData.user_id });
       setIsFollowing(true);
-      setProfileData(prev => prev ? { ...prev, followers_count: prev.followers_count + 1 } : prev);
     }
   };
 
@@ -167,6 +179,11 @@ const Profile = () => {
     }
   };
 
+  const handleSendMessage = () => {
+    if (!profileData) return;
+    navigate('/notifications');
+  };
+
   const fetchFollowers = async () => {
     if (!profileData) return;
     const { data } = await supabase.from('follows').select('follower_id').eq('following_id', profileData.user_id);
@@ -212,7 +229,6 @@ const Profile = () => {
     );
   }
 
-  // Followers / Following Modal
   if (showFollowers || showFollowing) {
     const list = showFollowers ? followersList : followingList;
     const title = showFollowers ? 'Followers' : 'Following';
@@ -330,19 +346,29 @@ const Profile = () => {
         </div>
 
         {isOwnProfile && !editing && (
-          <Button onClick={() => setEditing(true)} variant="outline" className="w-full mt-4 font-semibold">
-            Edit Profile
-          </Button>
+          <div className="flex gap-2 mt-4">
+            <Button onClick={() => setEditing(true)} variant="outline" className="flex-1 font-semibold">
+              Edit Profile
+            </Button>
+            <Button onClick={() => navigate('/settings')} variant="outline" size="icon">
+              <Settings className="w-4 h-4" />
+            </Button>
+          </div>
         )}
 
         {!isOwnProfile && user && (
-          <Button
-            onClick={toggleFollow}
-            className={`w-full mt-4 font-semibold ${isFollowing ? '' : 'gradient-primary text-primary-foreground'}`}
-            variant={isFollowing ? 'outline' : 'default'}
-          >
-            {isFollowing ? 'Following' : 'Follow'}
-          </Button>
+          <div className="flex gap-2 mt-4">
+            <Button
+              onClick={toggleFollow}
+              className={`flex-1 font-semibold ${isFollowing ? '' : 'gradient-primary text-primary-foreground'}`}
+              variant={isFollowing ? 'outline' : 'default'}
+            >
+              {isFollowing ? 'Following' : 'Follow'}
+            </Button>
+            <Button onClick={handleSendMessage} variant="outline" size="icon">
+              <Mail className="w-4 h-4" />
+            </Button>
+          </div>
         )}
       </div>
 

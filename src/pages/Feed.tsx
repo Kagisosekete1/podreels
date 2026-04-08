@@ -28,7 +28,6 @@ interface ReelWithProfile {
   };
 }
 
-// Fisher-Yates shuffle
 const shuffle = <T,>(arr: T[]): T[] => {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -133,9 +132,8 @@ const Feed = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      {/* Header - 40% opacity */}
       <div className="absolute top-0 left-0 right-0 z-30 px-4 pt-4 pb-2">
-        <span className="text-primary-foreground font-black text-lg opacity-30 drop-shadow-lg">PodReels</span>
+        <span className="text-primary-foreground font-black text-lg drop-shadow-lg" style={{ opacity: 0.4 }}>PodReels</span>
       </div>
       <div
         ref={containerRef}
