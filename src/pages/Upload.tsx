@@ -201,8 +201,8 @@ const Upload = () => {
             rows={5}
             maxLength={2000}
           />
-          <p className={`text-xs mt-1 ${wordCount < 100 ? 'text-destructive' : 'text-muted-foreground'}`}>
-            {wordCount}/100 words minimum
+          <p className="text-xs mt-1 text-muted-foreground">
+            {wordCount} words
           </p>
         </div>
 
