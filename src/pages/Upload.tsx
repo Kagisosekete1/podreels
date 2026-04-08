@@ -192,7 +192,7 @@ const Upload = () => {
         </div>
 
         <div>
-          <Label htmlFor="description">Description * <span className="text-muted-foreground font-normal">(min 100 words)</span></Label>
+          <Label htmlFor="description">Description <span className="text-muted-foreground font-normal">(add #hashtags inline)</span></Label>
           <Textarea
             id="description"
             value={description}
