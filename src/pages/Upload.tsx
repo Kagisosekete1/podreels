@@ -26,7 +26,7 @@ const Upload = () => {
   const [category, setCategory] = useState('');
   const [uploading, setUploading] = useState(false);
 
-  const wordCount = description.trim().split(/\s+/).filter(Boolean).length;
+  const wordCount = description.trim() ? description.trim().split(/\s+/).filter(Boolean).length : 0;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
