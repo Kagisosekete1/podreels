@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Search, PlusCircle, User, Bell, Hash, TrendingUp } from 'lucide-react';
+import { Home, Search, PlusCircle, User, Bell, Hash, TrendingUp, Settings, BarChart3, Users, Coffee, MoreHorizontal, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +12,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { user, profile } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [trendingTags, setTrendingTags] = useState<{ tag: string; count: number }[]>([]);
+  const [showMore, setShowMore] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -65,6 +66,13 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     { icon: User, label: 'Profile', path: profile ? `/profile/${profile.username}` : '/auth' },
   ];
 
+  const moreItems = [
+    { icon: Settings, label: 'Settings', path: '/settings' },
+    { icon: BarChart3, label: 'Dashboard', path: '/settings', action: () => navigate('/settings') },
+    { icon: Coffee, label: 'Buy Coke', path: '/buy-coke', action: () => navigate('/buy-coke') },
+    { icon: Users, label: 'Switch Account', path: '#', action: () => {} },
+  ];
+
   if (isMobile || location.pathname === '/auth' || location.pathname === '/') {
     return <>{children}</>;
   }
@@ -102,6 +110,41 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               </button>
             );
           })}
+
+          {/* More button */}
+          <div className="relative mt-2">
+            <button
+              onClick={() => setShowMore(!showMore)}
+              className={`flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-colors w-full ${
+                showMore ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
+              }`}
+            >
+              <MoreHorizontal className="w-6 h-6" />
+              <span>More</span>
+            </button>
+
+            {showMore && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowMore(false)} />
+                <div className="absolute bottom-full left-0 mb-2 w-56 bg-background border border-border rounded-xl shadow-xl z-50 py-2 animate-in slide-in-from-bottom-2">
+                  <div className="flex items-center justify-between px-4 py-2 border-b border-border mb-1">
+                    <span className="text-sm font-semibold">More</span>
+                    <button onClick={() => setShowMore(false)}><X className="w-4 h-4 text-muted-foreground" /></button>
+                  </div>
+                  {moreItems.map(item => (
+                    <button
+                      key={item.label}
+                      onClick={() => { setShowMore(false); if (item.action) item.action(); else navigate(item.path); }}
+                      className="flex items-center gap-3 px-4 py-2.5 w-full text-sm hover:bg-muted transition-colors"
+                    >
+                      <item.icon className="w-5 h-5 text-muted-foreground" />
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </nav>
 
         <div className="px-3 pt-4 border-t border-border mt-auto">
@@ -110,7 +153,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 ml-[220px] xl:ml-[245px] max-w-[630px] border-x border-border min-h-screen">
+      <main className="flex-1 ml-[220px] xl:ml-[245px] xl:mr-[300px] min-h-screen">
         {children}
       </main>
 
