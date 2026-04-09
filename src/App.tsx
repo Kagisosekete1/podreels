@@ -15,6 +15,7 @@ import Settings from "./pages/Settings";
 import HashtagFeed from "./pages/HashtagFeed";
 import ProfileFeed from "./pages/ProfileFeed";
 import Notifications from "./pages/Notifications";
+import BuyCoke from "./pages/BuyCoke";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/settings" element={<Settings />} />
               <Route path="/hashtag/:tag" element={<HashtagFeed />} />
               <Route path="/notifications" element={<Notifications />} />
+              <Route path="/buy-coke" element={<BuyCoke />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AppLayout>

@@ -206,6 +206,35 @@ export type Database = {
         }
         Relationships: []
       }
+      reel_views: {
+        Row: {
+          id: string
+          reel_id: string
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          id?: string
+          reel_id: string
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          id?: string
+          reel_id?: string
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reel_views_reel_id_fkey"
+            columns: ["reel_id"]
+            isOneToOne: false
+            referencedRelation: "reels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reels: {
         Row: {
           category: string
@@ -328,6 +357,10 @@ export type Database = {
         Returns: boolean
       }
       increment_view: { Args: { reel_uuid: string }; Returns: undefined }
+      increment_view_safe: {
+        Args: { reel_uuid: string; viewer_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
