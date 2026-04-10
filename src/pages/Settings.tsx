@@ -371,57 +371,7 @@ const Settings = () => {
   );
 
   if (subPage === 'earnings') return (
-    <div className="min-h-screen bg-background pb-24">
-      <SubPageHeader title="Creator Dashboard" />
-      <div className="max-w-lg mx-auto p-4 space-y-4">
-        {/* Stats cards */}
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: 'Total Views', value: '0', icon: '👁️' },
-            { label: 'Total Likes', value: '0', icon: '❤️' },
-            { label: 'Followers', value: profile?.followers_count?.toString() || '0', icon: '👥' },
-            { label: 'Total Earnings', value: '$0.00', icon: '💰' },
-          ].map(stat => (
-            <div key={stat.label} className="rounded-2xl border border-border bg-card p-4 text-center">
-              <span className="text-2xl">{stat.icon}</span>
-              <p className="text-xl font-bold mt-1">{stat.value}</p>
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Earnings */}
-        <div className="rounded-2xl gradient-primary p-4 text-primary-foreground">
-          <p className="text-xs font-medium opacity-80">This Month</p>
-          <p className="text-3xl font-black mt-1">$0.00</p>
-          <p className="text-xs opacity-70 mt-1">Monetization coming soon 🚀</p>
-        </div>
-
-        {/* How to earn */}
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-bold">How to Earn on PodReels</h3>
-          <div className="space-y-3">
-            {[
-              { title: 'Tips', desc: 'Viewers tip you directly for great content', icon: '🎁', status: 'Coming Soon' },
-              { title: 'Ad Revenue', desc: 'Earn a share of ad revenue from your reels', icon: '📺', status: 'Coming Soon' },
-              { title: 'Sponsorships', desc: 'Connect with brands for sponsored content', icon: '🤝', status: 'Coming Soon' },
-            ].map(item => (
-              <div key={item.title} className="flex items-start gap-3 p-3 rounded-xl bg-muted/50">
-                <span className="text-xl">{item.icon}</span>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{item.title}</p>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{item.status}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      <BottomNav />
-    </div>
+    <CreatorDashboard onBack={() => setSubPage(null)} profile={profile} user={user} />
   );
 
   // ── MAIN SETTINGS PAGE ──
