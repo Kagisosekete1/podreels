@@ -11,7 +11,108 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import BottomNav from '@/components/BottomNav';
 
+import { Coffee } from 'lucide-react';
+
 type SubPage = null | 'account' | 'privacy' | 'notifications' | 'earnings' | 'darkmode' | 'quality' | 'language' | 'help' | 'about' | 'terms' | 'faq';
+
+const CreatorDashboard = ({ onBack, profile, user }: { onBack: () => void; profile: any; user: any }) => {
+  const [totalViews, setTotalViews] = useState(0);
+  const [totalLikes, setTotalLikes] = useState(0);
+  const [coffeeTotal, setCoffeeTotal] = useState(0);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchStats = async () => {
+      const { data: reels } = await supabase.from('reels').select('views_count, likes_count').eq('user_id', user.id);
+      if (reels) {
+        setTotalViews(reels.reduce((sum, r) => sum + r.views_count, 0));
+        setTotalLikes(reels.reduce((sum, r) => sum + r.likes_count, 0));
+      }
+      // Count coffee messages received this month
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const { data: coffees } = await supabase.from('messages').select('content')
+        .eq('receiver_id', user.id)
+        .gte('created_at', startOfMonth)
+        .ilike('content', '%Bought you a coffee%');
+      if (coffees) {
+        let total = 0;
+        coffees.forEach(m => {
+          const match = m.content.match(/\$(\d+\.?\d*)/);
+          if (match) total += parseFloat(match[1]);
+        });
+        setCoffeeTotal(total);
+      }
+    };
+    fetchStats();
+
+    // Realtime updates
+    const channel = supabase
+      .channel('dashboard-stats')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reels', filter: `user_id=eq.${user.id}` }, () => { fetchStats(); })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${user.id}` }, () => { fetchStats(); })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user]);
+
+  return (
+    <div className="min-h-screen bg-background pb-24">
+      <div className="sticky top-0 z-40 bg-card/95 backdrop-blur-md border-b border-border px-4 py-4">
+        <div className="flex items-center gap-3 max-w-lg mx-auto">
+          <Button variant="ghost" size="icon" onClick={onBack} className="rounded-full">
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+          <h1 className="text-lg font-bold text-foreground">Creator Dashboard</h1>
+        </div>
+      </div>
+      <div className="max-w-lg mx-auto p-4 space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { label: 'Total Views', value: totalViews.toLocaleString(), icon: '👁️' },
+            { label: 'Total Likes', value: totalLikes.toLocaleString(), icon: '❤️' },
+            { label: 'Followers', value: profile?.followers_count?.toString() || '0', icon: '👥' },
+            { label: 'Coffee Received', value: `$${coffeeTotal.toFixed(2)}`, icon: '☕' },
+          ].map(stat => (
+            <div key={stat.label} className="rounded-2xl border border-border bg-card p-4 text-center">
+              <span className="text-2xl">{stat.icon}</span>
+              <p className="text-xl font-bold mt-1">{stat.value}</p>
+              <p className="text-xs text-muted-foreground">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-2xl gradient-primary p-4 text-primary-foreground">
+          <p className="text-xs font-medium opacity-80">Coffee This Month</p>
+          <p className="text-3xl font-black mt-1">${coffeeTotal.toFixed(2)}</p>
+          <p className="text-xs opacity-70 mt-1">From your amazing supporters ☕</p>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
+          <h3 className="text-sm font-bold">How to Earn on PodReels</h3>
+          <div className="space-y-3">
+            {[
+              { title: 'Coffee Tips', desc: 'Fans can buy you coffee directly', icon: '☕', status: 'Active' },
+              { title: 'Ad Revenue', desc: 'Earn from ads on your reels', icon: '📺', status: 'Coming Soon' },
+              { title: 'Sponsorships', desc: 'Connect with brands', icon: '🤝', status: 'Coming Soon' },
+            ].map(item => (
+              <div key={item.title} className="flex items-start gap-3 p-3 rounded-xl bg-muted/50">
+                <span className="text-xl">{item.icon}</span>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">{item.title}</p>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${item.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-primary/10 text-primary'}`}>{item.status}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <BottomNav />
+    </div>
+  );
+};
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -371,57 +472,7 @@ const Settings = () => {
   );
 
   if (subPage === 'earnings') return (
-    <div className="min-h-screen bg-background pb-24">
-      <SubPageHeader title="Creator Dashboard" />
-      <div className="max-w-lg mx-auto p-4 space-y-4">
-        {/* Stats cards */}
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: 'Total Views', value: '0', icon: '👁️' },
-            { label: 'Total Likes', value: '0', icon: '❤️' },
-            { label: 'Followers', value: profile?.followers_count?.toString() || '0', icon: '👥' },
-            { label: 'Total Earnings', value: '$0.00', icon: '💰' },
-          ].map(stat => (
-            <div key={stat.label} className="rounded-2xl border border-border bg-card p-4 text-center">
-              <span className="text-2xl">{stat.icon}</span>
-              <p className="text-xl font-bold mt-1">{stat.value}</p>
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Earnings */}
-        <div className="rounded-2xl gradient-primary p-4 text-primary-foreground">
-          <p className="text-xs font-medium opacity-80">This Month</p>
-          <p className="text-3xl font-black mt-1">$0.00</p>
-          <p className="text-xs opacity-70 mt-1">Monetization coming soon 🚀</p>
-        </div>
-
-        {/* How to earn */}
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-bold">How to Earn on PodReels</h3>
-          <div className="space-y-3">
-            {[
-              { title: 'Tips', desc: 'Viewers tip you directly for great content', icon: '🎁', status: 'Coming Soon' },
-              { title: 'Ad Revenue', desc: 'Earn a share of ad revenue from your reels', icon: '📺', status: 'Coming Soon' },
-              { title: 'Sponsorships', desc: 'Connect with brands for sponsored content', icon: '🤝', status: 'Coming Soon' },
-            ].map(item => (
-              <div key={item.title} className="flex items-start gap-3 p-3 rounded-xl bg-muted/50">
-                <span className="text-xl">{item.icon}</span>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">{item.title}</p>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">{item.status}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      <BottomNav />
-    </div>
+    <CreatorDashboard onBack={() => setSubPage(null)} profile={profile} user={user} />
   );
 
   // ── MAIN SETTINGS PAGE ──

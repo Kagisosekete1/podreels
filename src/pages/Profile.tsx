@@ -1,13 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Grid3X3, Bookmark, AtSign, Loader2, Camera, Check, X, Settings, Mail } from 'lucide-react';
+import { ArrowLeft, Grid3X3, Bookmark, AtSign, Loader2, Camera, Check, X, Settings, Mail, Coffee } from 'lucide-react';
 import { toast } from 'sonner';
 import BottomNav from '@/components/BottomNav';
+import Cropper from 'react-easy-crop';
 
 interface ProfileData {
   id: string;
@@ -30,6 +31,29 @@ interface ReelThumb {
   likes_count: number;
 }
 
+// Helper to create cropped image
+const createCroppedImage = (imageSrc: string, crop: { x: number; y: number; width: number; height: number }): Promise<Blob> => {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => {
+      const canvas = document.createElement('canvas');
+      const size = 400;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) { reject(new Error('No ctx')); return; }
+      ctx.drawImage(image, crop.x, crop.y, crop.width, crop.height, 0, 0, size, size);
+      canvas.toBlob(blob => {
+        if (blob) resolve(blob);
+        else reject(new Error('No blob'));
+      }, 'image/jpeg', 0.9);
+    };
+    image.onerror = reject;
+    image.src = imageSrc;
+  });
+};
+
 const Profile = () => {
   const { username } = useParams();
   const navigate = useNavigate();
@@ -50,6 +74,13 @@ const Profile = () => {
   const [followingList, setFollowingList] = useState<any[]>([]);
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
+
+  // Avatar cropper state
+  const [cropImage, setCropImage] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedArea, setCroppedArea] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
 
   const isOwnProfile = myProfile?.username === username;
 
@@ -132,23 +163,35 @@ const Profile = () => {
     }
   };
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     if (!file.type.startsWith('image/')) { toast.error('Please select an image'); return; }
     if (file.size > 5 * 1024 * 1024) { toast.error('Image too large (max 5MB)'); return; }
+    setCropFile(file);
+    setCropImage(URL.createObjectURL(file));
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+  };
 
+  const onCropComplete = useCallback((_: any, croppedAreaPixels: any) => {
+    setCroppedArea(croppedAreaPixels);
+  }, []);
+
+  const handleCropSave = async () => {
+    if (!cropImage || !croppedArea || !user) return;
     setUploadingAvatar(true);
     try {
-      const ext = file.name.split('.').pop();
-      const filePath = `${user.id}/avatar.${ext}`;
-      await supabase.storage.from('avatars').upload(filePath, file, { upsert: true, contentType: file.type });
+      const blob = await createCroppedImage(cropImage, croppedArea);
+      const filePath = `${user.id}/avatar.jpg`;
+      await supabase.storage.from('avatars').upload(filePath, blob, { upsert: true, contentType: 'image/jpeg' });
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
       const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
       await supabase.from('profiles').update({ avatar_url: avatarUrl }).eq('user_id', user.id);
       setProfileData(prev => prev ? { ...prev, avatar_url: avatarUrl } : prev);
       refreshProfile();
       toast.success('Profile picture updated');
+      setCropImage(null);
     } catch (err: any) {
       toast.error('Failed to upload: ' + err.message);
     } finally {
@@ -181,7 +224,13 @@ const Profile = () => {
 
   const handleSendMessage = () => {
     if (!profileData) return;
-    navigate('/notifications');
+    // Navigate to notifications inbox and open chat with this user
+    navigate(`/notifications?chat=${profileData.user_id}`);
+  };
+
+  const handleBuyCoffee = () => {
+    if (!profileData) return;
+    navigate(`/buy-coke?to=${profileData.user_id}&name=${profileData.username}`);
   };
 
   const fetchFollowers = async () => {
@@ -229,6 +278,45 @@ const Profile = () => {
     );
   }
 
+  // Avatar cropper modal
+  if (cropImage) {
+    return (
+      <div className="fixed inset-0 z-50 bg-background flex flex-col">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <button onClick={() => setCropImage(null)} className="text-muted-foreground"><X className="w-6 h-6" /></button>
+          <h2 className="font-bold">Crop Photo</h2>
+          <button onClick={handleCropSave} disabled={uploadingAvatar} className="text-primary font-semibold text-sm">
+            {uploadingAvatar ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Done'}
+          </button>
+        </div>
+        <div className="flex-1 relative">
+          <Cropper
+            image={cropImage}
+            crop={crop}
+            zoom={zoom}
+            aspect={1}
+            cropShape="round"
+            showGrid={false}
+            onCropChange={setCrop}
+            onZoomChange={setZoom}
+            onCropComplete={onCropComplete}
+          />
+        </div>
+        <div className="px-8 py-4">
+          <input
+            type="range"
+            min={1}
+            max={3}
+            step={0.1}
+            value={zoom}
+            onChange={e => setZoom(Number(e.target.value))}
+            className="w-full accent-primary"
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (showFollowers || showFollowing) {
     const list = showFollowers ? followersList : followingList;
     const title = showFollowers ? 'Followers' : 'Following';
@@ -249,7 +337,7 @@ const Profile = () => {
               className="flex items-center gap-3 px-4 py-3 w-full hover:bg-muted/50"
             >
               <Avatar className="w-10 h-10">
-                <AvatarImage src={p.avatar_url || undefined} />
+                <AvatarImage src={p.avatar_url || undefined} className="object-cover" />
                 <AvatarFallback className="gradient-primary text-primary-foreground text-sm font-bold">{p.username[0]?.toUpperCase()}</AvatarFallback>
               </Avatar>
               <div className="text-left">
@@ -280,7 +368,7 @@ const Profile = () => {
         <div className="flex items-center gap-6">
           <div className="relative">
             <Avatar className="w-20 h-20 border-2 border-primary">
-              <AvatarImage src={profileData.avatar_url || undefined} />
+              <AvatarImage src={profileData.avatar_url || undefined} className="object-cover" />
               <AvatarFallback className="gradient-primary text-primary-foreground text-2xl font-bold">
                 {profileData.username[0]?.toUpperCase()}
               </AvatarFallback>
@@ -293,7 +381,7 @@ const Profile = () => {
                 {uploadingAvatar ? <Loader2 className="w-3 h-3 animate-spin text-primary-foreground" /> : <Camera className="w-3 h-3 text-primary-foreground" />}
               </button>
             )}
-            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+            <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarSelect} />
           </div>
 
           <div className="flex-1 flex justify-around text-center">
@@ -337,7 +425,7 @@ const Profile = () => {
               <h2 className="font-bold text-lg flex items-center gap-2">
                 {profileData.display_name || profileData.username}
                 {profileData.is_podcaster && (
-                  <span className="px-2 py-0.5 text-[10px] font-bold rounded gradient-primary text-primary-foreground">PODCASTER</span>
+                  <span className="px-1.5 py-[1px] text-[8px] font-bold rounded-md gradient-primary text-primary-foreground tracking-wide">🎙️</span>
                 )}
               </h2>
               {profileData.bio && <p className="text-sm text-muted-foreground mt-1">{profileData.bio}</p>}
@@ -367,6 +455,9 @@ const Profile = () => {
             </Button>
             <Button onClick={handleSendMessage} variant="outline" size="icon">
               <Mail className="w-4 h-4" />
+            </Button>
+            <Button onClick={handleBuyCoffee} variant="outline" size="icon">
+              <Coffee className="w-4 h-4" />
             </Button>
           </div>
         )}

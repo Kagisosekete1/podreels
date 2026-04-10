@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -41,6 +41,7 @@ interface Conversation {
 
 const Notifications = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [tab, setTab] = useState<'alerts' | 'inbox'>('alerts');
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -54,6 +55,15 @@ const Notifications = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{ user_id: string; username: string; avatar_url: string | null }[]>([]);
   const [searching, setSearching] = useState(false);
+
+  // Auto-open chat if ?chat=userId is present
+  useEffect(() => {
+    const chatUserId = searchParams.get('chat');
+    if (chatUserId && user) {
+      setTab('inbox');
+      openChat(chatUserId);
+    }
+  }, [searchParams, user]);
 
   useEffect(() => {
     if (!user || tab !== 'alerts') return;
@@ -102,6 +112,25 @@ const Notifications = () => {
     };
     fetchConversations();
   }, [user, tab]);
+
+  // Realtime chat messages
+  useEffect(() => {
+    if (!activeChat || !user) return;
+    const channel = supabase
+      .channel(`chat-${activeChat}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => {
+        const msg = payload.new as Message;
+        if ((msg.sender_id === user.id && msg.receiver_id === activeChat) ||
+            (msg.sender_id === activeChat && msg.receiver_id === user.id)) {
+          setChatMessages(prev => {
+            if (prev.find(m => m.id === msg.id)) return prev;
+            return [...prev, msg];
+          });
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [activeChat, user]);
 
   const searchUsers = async (q: string) => {
     setSearchQuery(q);
@@ -172,7 +201,7 @@ const Notifications = () => {
           <div className="flex items-center gap-3 h-14 px-4">
             <button onClick={() => setActiveChat(null)}><ArrowLeft className="w-5 h-5" /></button>
             <Avatar className="w-8 h-8">
-              <AvatarImage src={chatProfile.avatar_url || undefined} />
+              <AvatarImage src={chatProfile.avatar_url || undefined} className="object-cover" />
               <AvatarFallback className="gradient-primary text-primary-foreground text-xs font-bold">{chatProfile.username[0]?.toUpperCase()}</AvatarFallback>
             </Avatar>
             <span className="font-semibold text-sm">@{chatProfile.username}</span>
@@ -236,7 +265,7 @@ const Notifications = () => {
                 else if (n.reel_id) navigate('/feed');
               }} className={`flex items-start gap-3 w-full px-4 py-3 text-left transition-colors hover:bg-muted/50 ${!n.read ? 'bg-primary/5' : ''}`}>
                 <Avatar className="w-10 h-10 mt-0.5">
-                  <AvatarImage src={n.actor_profile?.avatar_url || undefined} />
+                  <AvatarImage src={n.actor_profile?.avatar_url || undefined} className="object-cover" />
                   <AvatarFallback className="gradient-primary text-primary-foreground text-xs font-bold">{n.actor_profile?.username?.[0]?.toUpperCase() || '?'}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
@@ -249,7 +278,6 @@ const Notifications = () => {
         )
       ) : (
         <div>
-          {/* Search users */}
           <div className="px-4 py-3 border-b border-border">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -260,7 +288,7 @@ const Notifications = () => {
                 {searchResults.map(u => (
                   <button key={u.user_id} onClick={() => openChat(u.user_id)} className="flex items-center gap-3 px-4 py-2.5 w-full hover:bg-muted/50 transition-colors">
                     <Avatar className="w-8 h-8">
-                      <AvatarImage src={u.avatar_url || undefined} />
+                      <AvatarImage src={u.avatar_url || undefined} className="object-cover" />
                       <AvatarFallback className="gradient-primary text-primary-foreground text-xs font-bold">{u.username[0]?.toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <span className="text-sm font-medium">@{u.username}</span>
@@ -282,7 +310,7 @@ const Notifications = () => {
               {conversations.map(c => (
                 <button key={c.user_id} onClick={() => openChat(c.user_id)} className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors">
                   <Avatar className="w-12 h-12">
-                    <AvatarImage src={c.avatar_url || undefined} />
+                    <AvatarImage src={c.avatar_url || undefined} className="object-cover" />
                     <AvatarFallback className="gradient-primary text-primary-foreground text-sm font-bold">{c.username[0]?.toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">

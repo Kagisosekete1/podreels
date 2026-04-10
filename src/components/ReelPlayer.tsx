@@ -1,6 +1,6 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Share2, Play, Bookmark, Send, Trash2, Eye } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Play, Bookmark, Send, Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import CommentsSheet from '@/components/CommentsSheet';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,6 +21,7 @@ interface ReelPlayerProps {
     views_count: number;
     user_id: string;
     hashtags?: string[];
+    duration_seconds?: number;
     profiles: {
       username: string;
       display_name: string | null;
@@ -69,9 +70,9 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
   const [viewCount, setViewCount] = useState(reel.views_count);
   const [likesCount, setLikesCount] = useState(reel.likes_count);
   const [commentsCount, setCommentsCount] = useState(reel.comments_count);
+  const [progress, setProgress] = useState(0);
   const viewCounted = useRef(false);
 
-  // Sync counts from prop changes
   useEffect(() => {
     setLikesCount(reel.likes_count);
     setCommentsCount(reel.comments_count);
@@ -88,7 +89,6 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
     }
   }, [user, reel.id, reel.user_id]);
 
-  // Realtime updates for this reel
   useEffect(() => {
     const channel = supabase
       .channel(`reel-stats-${reel.id}`)
@@ -104,11 +104,26 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
     return () => { supabase.removeChannel(channel); };
   }, [reel.id]);
 
+  // Progress bar update
+  const handleTimeUpdate = useCallback(() => {
+    if (!videoRef.current) return;
+    const v = videoRef.current;
+    if (v.duration > 0) {
+      setProgress((v.currentTime / v.duration) * 100);
+    }
+  }, []);
+
   useEffect(() => {
     if (!videoRef.current) return;
     if (isActive) {
       videoRef.current.muted = false;
-      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {
+        // Autoplay blocked, try muted
+        if (videoRef.current) {
+          videoRef.current.muted = true;
+          videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+        }
+      });
       if (!viewCounted.current && user) {
         viewCounted.current = true;
         supabase.rpc('increment_view_safe', { reel_uuid: reel.id, viewer_id: user.id });
@@ -121,6 +136,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       videoRef.current.currentTime = 0;
       setIsPlaying(false);
       setExpanded(false);
+      setProgress(0);
     }
   }, [isActive, reel.id, user]);
 
@@ -177,11 +193,19 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
 
   const descriptionText = reel.description || '';
 
-  // Desktop layout: video centered with actions on the right outside the video
+  const ProgressBar = () => (
+    <div className="w-full h-[3px] bg-foreground/20 rounded-full overflow-hidden">
+      <div
+        className="h-full bg-primary rounded-full transition-[width] duration-200 ease-linear"
+        style={{ width: `${progress}%` }}
+      />
+    </div>
+  );
+
+  // Desktop layout
   if (!isMobile) {
     return (
       <div className="h-screen w-full snap-start flex items-center justify-center bg-background gap-4" style={{ scrollSnapAlign: 'start' }}>
-        {/* Video container - fixed aspect ratio */}
         <div className="relative h-[calc(100vh-2rem)] aspect-[9/16] max-w-[400px] bg-foreground/95 rounded-2xl overflow-hidden">
           <video
             ref={videoRef}
@@ -190,6 +214,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
             loop
             playsInline
             onClick={togglePlay}
+            onTimeUpdate={handleTimeUpdate}
           />
           {!isPlaying && (
             <button onClick={togglePlay} className="absolute inset-0 flex items-center justify-center z-10">
@@ -200,7 +225,6 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
           )}
           <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
 
-          {/* Bottom info inside video */}
           <div className="absolute bottom-4 left-3 right-3 z-20">
             <div className="flex items-center gap-1.5 mb-1.5">
               <button onClick={() => navigate(`/profile/${reel.profiles.username}`)}>
@@ -235,18 +259,16 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
                 )}
               </div>
             )}
-            <div className="flex items-center gap-1 mt-0.5">
-              <Eye className="w-3 h-3 text-white/50" />
-              <span className="text-white/50 text-[10px]">{formatCount(viewCount)} views</span>
+            <div className="mt-1.5">
+              <ProgressBar />
             </div>
           </div>
         </div>
 
-        {/* Actions on the right side - outside video */}
         <div className="flex flex-col items-center gap-5 py-4">
           <button onClick={() => navigate(`/profile/${reel.profiles.username}`)}>
             <Avatar className="w-10 h-10 border-2 border-primary">
-              <AvatarImage src={reel.profiles.avatar_url || undefined} />
+              <AvatarImage src={reel.profiles.avatar_url || undefined} className="object-cover" />
               <AvatarFallback className="gradient-primary text-primary-foreground text-xs font-bold">
                 {reel.profiles.username[0]?.toUpperCase()}
               </AvatarFallback>
@@ -291,7 +313,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
     );
   }
 
-  // Mobile layout (original)
+  // Mobile layout
   return (
     <div className="h-screen w-full relative snap-start bg-foreground/95 flex items-center justify-center" style={{ scrollSnapAlign: 'start' }}>
       <video
@@ -301,6 +323,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         loop
         playsInline
         onClick={togglePlay}
+        onTimeUpdate={handleTimeUpdate}
       />
 
       {!isPlaying && (
@@ -317,7 +340,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       <div className="absolute right-2 bottom-28 flex flex-col items-center gap-3.5 z-20">
         <button onClick={() => navigate(`/profile/${reel.profiles.username}`)} className="mb-1">
           <Avatar className="w-9 h-9 border-[1.5px] border-primary">
-            <AvatarImage src={reel.profiles.avatar_url || undefined} />
+            <AvatarImage src={reel.profiles.avatar_url || undefined} className="object-cover" />
             <AvatarFallback className="gradient-primary text-primary-foreground text-xs font-bold">
               {reel.profiles.username[0]?.toUpperCase()}
             </AvatarFallback>
@@ -402,9 +425,8 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
           </div>
         )}
 
-        <div className="flex items-center gap-1 mt-0.5">
-          <Eye className="w-3 h-3 text-primary-foreground/50" />
-          <span className="text-primary-foreground/50 text-[10px]">{formatCount(viewCount)} views</span>
+        <div className="mt-1.5">
+          <ProgressBar />
         </div>
       </div>
 

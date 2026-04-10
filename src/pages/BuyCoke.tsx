@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Coffee, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ArrowLeft, Coffee, Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import BottomNav from '@/components/BottomNav';
 
@@ -13,18 +13,21 @@ const BuyCoke = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const [amount, setAmount] = useState('');
-  const [message, setMessage] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<{ user_id: string; username: string; avatar_url: string | null }[]>([]);
   const [selectedUser, setSelectedUser] = useState<{ user_id: string; username: string; avatar_url: string | null } | null>(null);
+  const [amount, setAmount] = useState('');
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    const toUser = searchParams.get('to');
-    if (toUser) {
-      supabase.from('profiles').select('user_id, username, avatar_url').eq('user_id', toUser).single()
-        .then(({ data }) => { if (data) setSelectedUser(data); });
+    const toId = searchParams.get('to');
+    const name = searchParams.get('name');
+    if (toId && name) {
+      setSelectedUser({ user_id: toId, username: name, avatar_url: null });
+      supabase.from('profiles').select('avatar_url').eq('user_id', toId).single()
+        .then(({ data }) => {
+          if (data) setSelectedUser(prev => prev ? { ...prev, avatar_url: data.avatar_url } : prev);
+        });
     }
   }, [searchParams]);
 
@@ -38,24 +41,25 @@ const BuyCoke = () => {
 
   const handleSend = async () => {
     if (!user || !selectedUser || !amount) return;
-    const coins = parseInt(amount);
-    if (isNaN(coins) || coins < 1) { toast.error('Enter a valid amount'); return; }
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount) || numAmount <= 0) { toast.error('Enter a valid amount'); return; }
     setSending(true);
-    // Send a message with the coke info
-    await supabase.from('messages').insert({
+    const { error } = await supabase.from('messages').insert({
       sender_id: user.id,
       receiver_id: selectedUser.user_id,
-      content: `☕ Sent you ${coins} coin${coins > 1 ? 's' : ''}! ${message ? `"${message}"` : ''}`,
+      content: `☕ Bought you a coffee! ($${numAmount.toFixed(2)})`,
     });
-    toast.success(`You sent ${coins} coins to @${selectedUser.username}! 🎉`);
-    setAmount('');
-    setMessage('');
+    if (error) { toast.error('Failed to send'); }
+    else {
+      toast.success(`Sent $${numAmount.toFixed(2)} coffee to @${selectedUser.username}! ☕`);
+      setAmount('');
+    }
     setSending(false);
   };
 
   if (!user) { navigate('/auth'); return null; }
 
-  const presets = [5, 10, 25, 50, 100];
+  const presetAmounts = [1, 3, 5, 10, 25];
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -63,74 +67,81 @@ const BuyCoke = () => {
         <div className="flex items-center gap-3 h-14 px-4">
           <button onClick={() => navigate(-1)}><ArrowLeft className="w-5 h-5" /></button>
           <Coffee className="w-5 h-5 text-primary" />
-          <h1 className="text-lg font-bold">Buy a Coke</h1>
+          <h1 className="text-lg font-bold">Buy a Coffee</h1>
         </div>
       </header>
 
-      <div className="p-4 max-w-md mx-auto space-y-6">
-        <div className="text-center py-4">
-          <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center mx-auto mb-3">
-            <Coffee className="w-8 h-8 text-primary-foreground" />
-          </div>
-          <h2 className="text-xl font-bold">Support a Podcaster</h2>
-          <p className="text-sm text-muted-foreground mt-1">Send coins to your favorite creators!</p>
-        </div>
-
+      <div className="max-w-md mx-auto p-4 space-y-6">
         {!selectedUser ? (
-          <div className="space-y-3">
-            <label className="text-sm font-medium">Find a podcaster</label>
-            <Input value={searchQuery} onChange={e => searchUsers(e.target.value)} placeholder="Search username..." />
-            {searchResults.length > 0 && (
-              <div className="border border-border rounded-xl overflow-hidden">
-                {searchResults.map(u => (
-                  <button key={u.user_id} onClick={() => { setSelectedUser(u); setSearchQuery(''); setSearchResults([]); }}
-                    className="flex items-center gap-3 px-4 py-2.5 w-full hover:bg-muted/50 transition-colors">
-                    <Avatar className="w-8 h-8">
-                      <AvatarImage src={u.avatar_url || undefined} />
-                      <AvatarFallback className="gradient-primary text-primary-foreground text-xs font-bold">{u.username[0]?.toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm font-medium">@{u.username}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <>
+            <p className="text-sm text-muted-foreground text-center">Search for a podcaster to support</p>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input value={searchQuery} onChange={e => searchUsers(e.target.value)} placeholder="Search username..." className="pl-9" />
+            </div>
+            {searchResults.map(u => (
+              <button key={u.user_id} onClick={() => { setSelectedUser(u); setSearchQuery(''); setSearchResults([]); }}
+                className="flex items-center gap-3 px-4 py-3 w-full hover:bg-muted/50 rounded-xl transition-colors">
+                <Avatar className="w-10 h-10">
+                  <AvatarImage src={u.avatar_url || undefined} className="object-cover" />
+                  <AvatarFallback className="gradient-primary text-primary-foreground text-sm font-bold">{u.username[0]?.toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <span className="font-medium">@{u.username}</span>
+              </button>
+            ))}
+          </>
         ) : (
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-xl">
-              <Avatar className="w-10 h-10">
-                <AvatarImage src={selectedUser.avatar_url || undefined} />
-                <AvatarFallback className="gradient-primary text-primary-foreground text-sm font-bold">{selectedUser.username[0]?.toUpperCase()}</AvatarFallback>
+          <>
+            <div className="flex flex-col items-center gap-3 py-4">
+              <Avatar className="w-16 h-16 border-2 border-primary">
+                <AvatarImage src={selectedUser.avatar_url || undefined} className="object-cover" />
+                <AvatarFallback className="gradient-primary text-primary-foreground text-xl font-bold">{selectedUser.username[0]?.toUpperCase()}</AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <p className="text-sm font-semibold">@{selectedUser.username}</p>
+              <div className="text-center">
+                <p className="font-bold text-lg">@{selectedUser.username}</p>
+                <p className="text-xs text-muted-foreground">Buy them a coffee ☕</p>
               </div>
-              <button onClick={() => setSelectedUser(null)} className="text-xs text-muted-foreground hover:text-foreground">Change</button>
+              <button onClick={() => setSelectedUser(null)} className="text-xs text-primary">Change</button>
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-2">
+              {presetAmounts.map(a => (
+                <button
+                  key={a}
+                  onClick={() => setAmount(a.toString())}
+                  className={`px-5 py-2.5 rounded-full text-sm font-semibold border transition-colors ${
+                    amount === a.toString() ? 'border-primary bg-primary/10 text-primary' : 'border-border text-foreground hover:bg-muted'
+                  }`}
+                >
+                  ${a}
+                </button>
+              ))}
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-2 block">How many coins?</label>
-              <div className="flex flex-wrap gap-2 mb-3">
-                {presets.map(p => (
-                  <button key={p} onClick={() => setAmount(p.toString())}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${amount === p.toString() ? 'gradient-primary text-primary-foreground' : 'bg-muted text-foreground hover:bg-muted/80'}`}>
-                    {p} 🪙
-                  </button>
-                ))}
-              </div>
-              <Input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Or enter custom amount" min="1" />
+              <p className="text-xs text-muted-foreground mb-1">Or enter custom amount</p>
+              <Input
+                value={amount}
+                onChange={e => setAmount(e.target.value)}
+                placeholder="0.00"
+                type="number"
+                min="1"
+                step="0.01"
+                className="text-center text-2xl font-bold h-14"
+              />
             </div>
 
-            <div>
-              <label className="text-sm font-medium mb-2 block">Message (optional)</label>
-              <Input value={message} onChange={e => setMessage(e.target.value)} placeholder="Love your podcast!" maxLength={200} />
-            </div>
-
-            <Button onClick={handleSend} disabled={sending || !amount} className="w-full gradient-primary text-primary-foreground font-semibold">
-              {sending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Coffee className="w-4 h-4 mr-2" />}
-              Send {amount || '0'} Coins
+            <Button
+              onClick={handleSend}
+              disabled={sending || !amount || parseFloat(amount) <= 0}
+              className="w-full h-12 gradient-primary text-primary-foreground font-semibold"
+            >
+              {sending ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Coffee className="w-5 h-5 mr-2" />}
+              {sending ? 'Sending...' : `Send $${amount || '0'} Coffee ☕`}
             </Button>
-          </div>
+
+            <p className="text-[10px] text-center text-muted-foreground">Tips are sent as messages. Payment integration coming soon.</p>
+          </>
         )}
       </div>
       <BottomNav />

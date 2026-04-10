@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Search, PlusCircle, User, Bell, Hash, TrendingUp, Settings, BarChart3, Users, Coffee, MoreHorizontal, X } from 'lucide-react';
+import { Home, Search, PlusCircle, User, Bell, Hash, TrendingUp, Settings, BarChart3, Coffee, MoreHorizontal, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,10 +9,17 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const isMobile = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, loading } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [trendingTags, setTrendingTags] = useState<{ tag: string; count: number }[]>([]);
   const [showMore, setShowMore] = useState(false);
+
+  // Redirect unauthenticated users
+  useEffect(() => {
+    if (!loading && !user && location.pathname !== '/auth' && location.pathname !== '/') {
+      navigate('/auth', { replace: true });
+    }
+  }, [user, loading, location.pathname, navigate]);
 
   useEffect(() => {
     if (!user) return;
@@ -67,10 +74,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   ];
 
   const moreItems = [
-    { icon: Settings, label: 'Settings', path: '/settings' },
+    { icon: Settings, label: 'Settings', path: '/settings', action: () => navigate('/settings') },
     { icon: BarChart3, label: 'Dashboard', path: '/settings', action: () => navigate('/settings') },
-    { icon: Coffee, label: 'Buy Coke', path: '/buy-coke', action: () => navigate('/buy-coke') },
-    { icon: Users, label: 'Switch Account', path: '#', action: () => {} },
+    { icon: Coffee, label: 'Buy Coffee', path: '/buy-coke', action: () => navigate('/buy-coke') },
   ];
 
   if (isMobile || location.pathname === '/auth' || location.pathname === '/') {
@@ -81,7 +87,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
     <div className="flex min-h-screen bg-background">
       {/* Left Sidebar */}
       <aside className="fixed left-0 top-0 bottom-0 w-[220px] xl:w-[245px] border-r border-border bg-background z-50 flex flex-col py-6 px-3">
-        <button onClick={() => navigate('/feed')} className="px-3 mb-8">
+        <button onClick={() => navigate('/feed')} className="px-3 mb-8 flex items-center gap-2">
+          <img src="/logo.png" alt="PodReels" className="w-7 h-7" />
           <h1 className="text-xl font-black text-gradient">PodReels</h1>
         </button>
 
@@ -134,7 +141,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                   {moreItems.map(item => (
                     <button
                       key={item.label}
-                      onClick={() => { setShowMore(false); if (item.action) item.action(); else navigate(item.path); }}
+                      onClick={() => { setShowMore(false); item.action(); }}
                       className="flex items-center gap-3 px-4 py-2.5 w-full text-sm hover:bg-muted transition-colors"
                     >
                       <item.icon className="w-5 h-5 text-muted-foreground" />
