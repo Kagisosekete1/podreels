@@ -245,12 +245,21 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
             ref={videoRef}
             src={reel.video_url}
             className="absolute inset-0 w-full h-full object-contain bg-black"
-            loop
+            loop={loopCount.current < 3}
             playsInline
             onClick={togglePlay}
             onTimeUpdate={handleTimeUpdate}
+            onEnded={handleVideoEnded}
           />
-          {!isPlaying && (
+          {showContinue && (
+            <button onClick={handleContinuePlaying} className="absolute inset-0 flex items-center justify-center z-20 bg-black/50 backdrop-blur-sm">
+              <div className="flex flex-col items-center gap-3">
+                <Play className="w-12 h-12 text-white fill-white" />
+                <span className="text-white font-semibold text-sm">Continue Playing</span>
+              </div>
+            </button>
+          )}
+          {!isPlaying && !showContinue && (
             <button onClick={togglePlay} className="absolute inset-0 flex items-center justify-center z-10">
               <div className="w-14 h-14 rounded-full bg-background/30 backdrop-blur-sm flex items-center justify-center">
                 <Play className="w-7 h-7 text-primary-foreground fill-current ml-0.5" />
@@ -354,13 +363,23 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         ref={videoRef}
         src={reel.video_url}
         className="absolute inset-0 w-full h-full object-cover"
-        loop
+        loop={loopCount.current < 3}
         playsInline
         onClick={togglePlay}
         onTimeUpdate={handleTimeUpdate}
+        onEnded={handleVideoEnded}
       />
 
-      {!isPlaying && (
+      {showContinue && (
+        <button onClick={handleContinuePlaying} className="absolute inset-0 flex items-center justify-center z-20 bg-black/50 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3">
+            <Play className="w-14 h-14 text-white fill-white" />
+            <span className="text-white font-semibold text-base">Continue Playing</span>
+          </div>
+        </button>
+      )}
+
+      {!isPlaying && !showContinue && (
         <button onClick={togglePlay} className="absolute inset-0 flex items-center justify-center z-10">
           <div className="w-14 h-14 rounded-full bg-background/30 backdrop-blur-sm flex items-center justify-center">
             <Play className="w-7 h-7 text-primary-foreground fill-current ml-0.5" />
