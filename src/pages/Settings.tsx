@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Lock, Bell, DollarSign, Moon, Sun, Wifi, Globe, HelpCircle, Info, Shield, LogOut, ChevronRight, ChevronLeft, X, Settings as SettingsIcon, Check } from 'lucide-react';
+import { ArrowLeft, User, Lock, Bell, DollarSign, Moon, Sun, Wifi, Globe, HelpCircle, Info, Shield, LogOut, ChevronRight, ChevronLeft, X, Settings as SettingsIcon, Check, Eye, Heart, Users, TrendingUp, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import BottomNav from '@/components/BottomNav';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 import { Coffee } from 'lucide-react';
 
@@ -19,16 +20,35 @@ const CreatorDashboard = ({ onBack, profile, user }: { onBack: () => void; profi
   const [totalViews, setTotalViews] = useState(0);
   const [totalLikes, setTotalLikes] = useState(0);
   const [coffeeTotal, setCoffeeTotal] = useState(0);
+  const [reelStats, setReelStats] = useState<{ name: string; views: number; likes: number }[]>([]);
+  const [weeklyData, setWeeklyData] = useState<{ day: string; views: number }[]>([]);
 
   useEffect(() => {
     if (!user) return;
     const fetchStats = async () => {
-      const { data: reels } = await supabase.from('reels').select('views_count, likes_count').eq('user_id', user.id);
+      const { data: reels } = await supabase.from('reels').select('title, views_count, likes_count, created_at').eq('user_id', user.id).order('created_at', { ascending: false });
       if (reels) {
         setTotalViews(reels.reduce((sum, r) => sum + r.views_count, 0));
         setTotalLikes(reels.reduce((sum, r) => sum + r.likes_count, 0));
+        // Top 6 reels for bar chart
+        setReelStats(reels.slice(0, 6).map((r, i) => ({
+          name: r.title.length > 12 ? r.title.slice(0, 12) + '…' : r.title,
+          views: r.views_count,
+          likes: r.likes_count,
+        })));
+        // Weekly breakdown (last 7 days)
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const weekData = Array.from({ length: 7 }, (_, i) => {
+          const d = new Date();
+          d.setDate(d.getDate() - (6 - i));
+          const dayReels = reels.filter(r => {
+            const rd = new Date(r.created_at);
+            return rd.toDateString() === d.toDateString();
+          });
+          return { day: days[d.getDay()], views: dayReels.reduce((s, r) => s + r.views_count, 0) };
+        });
+        setWeeklyData(weekData);
       }
-      // Count coffee messages received this month
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const { data: coffees } = await supabase.from('messages').select('content')
@@ -46,7 +66,6 @@ const CreatorDashboard = ({ onBack, profile, user }: { onBack: () => void; profi
     };
     fetchStats();
 
-    // Realtime updates
     const channel = supabase
       .channel('dashboard-stats')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reels', filter: `user_id=eq.${user.id}` }, () => { fetchStats(); })
@@ -58,49 +77,102 @@ const CreatorDashboard = ({ onBack, profile, user }: { onBack: () => void; profi
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="sticky top-0 z-40 bg-card/95 backdrop-blur-md border-b border-border px-4 py-4">
-        <div className="flex items-center gap-3 max-w-lg mx-auto">
+        <div className="flex items-center gap-3 max-w-2xl mx-auto">
           <Button variant="ghost" size="icon" onClick={onBack} className="rounded-full">
             <ChevronLeft className="w-5 h-5" />
           </Button>
           <h1 className="text-lg font-bold text-foreground">Creator Dashboard</h1>
         </div>
       </div>
-      <div className="max-w-lg mx-auto p-4 space-y-4">
-        <div className="grid grid-cols-2 gap-3">
+      <div className="max-w-2xl mx-auto p-4 space-y-5">
+        {/* Stats cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
-            { label: 'Total Views', value: totalViews.toLocaleString(), icon: '👁️' },
-            { label: 'Total Likes', value: totalLikes.toLocaleString(), icon: '❤️' },
-            { label: 'Followers', value: profile?.followers_count?.toString() || '0', icon: '👥' },
-            { label: 'Coffee Received', value: `$${coffeeTotal.toFixed(2)}`, icon: '☕' },
+            { label: 'Total Views', value: totalViews.toLocaleString(), icon: Eye, color: 'text-blue-500' },
+            { label: 'Total Likes', value: totalLikes.toLocaleString(), icon: Heart, color: 'text-accent' },
+            { label: 'Followers', value: profile?.followers_count?.toString() || '0', icon: Users, color: 'text-green-500' },
+            { label: 'Coffee Earned', value: `$${coffeeTotal.toFixed(2)}`, icon: Coffee, color: 'text-amber-500' },
           ].map(stat => (
-            <div key={stat.label} className="rounded-2xl border border-border bg-card p-4 text-center">
-              <span className="text-2xl">{stat.icon}</span>
-              <p className="text-xl font-bold mt-1">{stat.value}</p>
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
+            <div key={stat.label} className="rounded-2xl border border-border bg-card p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <stat.icon className={`w-4 h-4 ${stat.color}`} />
+                <p className="text-[11px] text-muted-foreground font-medium">{stat.label}</p>
+              </div>
+              <p className="text-2xl font-bold text-foreground">{stat.value}</p>
             </div>
           ))}
         </div>
 
-        <div className="rounded-2xl gradient-primary p-4 text-primary-foreground">
-          <p className="text-xs font-medium opacity-80">Coffee This Month</p>
-          <p className="text-3xl font-black mt-1">${coffeeTotal.toFixed(2)}</p>
-          <p className="text-xs opacity-70 mt-1">From your amazing supporters ☕</p>
+        {/* Weekly views chart */}
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="w-4 h-4 text-primary" />
+            <h3 className="text-sm font-bold text-foreground">Views This Week</h3>
+          </div>
+          <div className="h-[180px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={weeklyData}>
+                <defs>
+                  <linearGradient id="viewsGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="day" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={30} />
+                <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12, border: '1px solid hsl(var(--border))' }} />
+                <Area type="monotone" dataKey="views" stroke="hsl(var(--primary))" fill="url(#viewsGradient)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
+        {/* Top reels bar chart */}
+        {reelStats.length > 0 && (
+          <div className="rounded-2xl border border-border bg-card p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-bold text-foreground">Top PodReels Performance</h3>
+            </div>
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={reelStats} barGap={4}>
+                  <XAxis dataKey="name" tick={{ fontSize: 9 }} axisLine={false} tickLine={false} angle={-20} textAnchor="end" height={50} />
+                  <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} width={30} />
+                  <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12, border: '1px solid hsl(var(--border))' }} />
+                  <Bar dataKey="views" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} name="Views" />
+                  <Bar dataKey="likes" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} name="Likes" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        {/* Coffee this month */}
+        <div className="rounded-2xl gradient-primary p-5 text-primary-foreground">
+          <div className="flex items-center gap-2 mb-1">
+            <Coffee className="w-4 h-4" />
+            <p className="text-xs font-medium opacity-80">Coffee This Month</p>
+          </div>
+          <p className="text-3xl font-black mt-1">${coffeeTotal.toFixed(2)}</p>
+          <p className="text-xs opacity-70 mt-1">From your amazing supporters</p>
+        </div>
+
+        {/* How to earn */}
         <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
           <h3 className="text-sm font-bold">How to Earn on PodReels</h3>
           <div className="space-y-3">
             {[
-              { title: 'Coffee Tips', desc: 'Fans can buy you coffee directly', icon: '☕', status: 'Active' },
-              { title: 'Ad Revenue', desc: 'Earn from ads on your reels', icon: '📺', status: 'Coming Soon' },
-              { title: 'Sponsorships', desc: 'Connect with brands', icon: '🤝', status: 'Coming Soon' },
+              { title: 'Coffee Tips', desc: 'Fans can buy you coffee directly', icon: Coffee, status: 'Active' },
+              { title: 'Ad Revenue', desc: 'Earn from ads on your reels', icon: DollarSign, status: 'Coming Soon' },
+              { title: 'Sponsorships', desc: 'Connect with brands', icon: Users, status: 'Coming Soon' },
             ].map(item => (
               <div key={item.title} className="flex items-start gap-3 p-3 rounded-xl bg-muted/50">
-                <span className="text-xl">{item.icon}</span>
+                <item.icon className="w-5 h-5 text-muted-foreground mt-0.5" />
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium">{item.title}</p>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${item.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-primary/10 text-primary'}`}>{item.status}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${item.status === 'Active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-primary/10 text-primary'}`}>{item.status}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">{item.desc}</p>
                 </div>
