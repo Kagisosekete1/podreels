@@ -108,7 +108,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 <div className="relative">
                   <item.icon className={`w-6 h-6 ${isActive ? 'text-primary' : ''}`} />
                    {typeof item.badge === 'number' && item.badge > 0 && (
-                    <span className="absolute -top-1 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground flex items-center justify-center">
                       {item.badge > 99 ? '99+' : item.badge}
                     </span>
                   )}
@@ -117,45 +117,43 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               </button>
             );
           })}
-
-          {/* More button */}
-          <div className="relative mt-2">
-            <button
-              onClick={() => setShowMore(!showMore)}
-              className={`flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-colors w-full ${
-                showMore ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
-              }`}
-            >
-              <MoreHorizontal className="w-6 h-6" />
-              <span>More</span>
-            </button>
-
-            {showMore && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setShowMore(false)} />
-                <div className="absolute bottom-full left-0 mb-2 w-56 bg-background border border-border rounded-xl shadow-xl z-50 py-2 animate-in slide-in-from-bottom-2">
-                  <div className="flex items-center justify-between px-4 py-2 border-b border-border mb-1">
-                    <span className="text-sm font-semibold">More</span>
-                    <button onClick={() => setShowMore(false)}><X className="w-4 h-4 text-muted-foreground" /></button>
-                  </div>
-                  {moreItems.map(item => (
-                    <button
-                      key={item.label}
-                      onClick={() => { setShowMore(false); item.action(); }}
-                      className="flex items-center gap-3 px-4 py-2.5 w-full text-sm hover:bg-muted transition-colors"
-                    >
-                      <item.icon className="w-5 h-5 text-muted-foreground" />
-                      <span>{item.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
         </nav>
 
-        <div className="px-3 pt-4 border-t border-border mt-auto">
-          <p className="text-[10px] text-muted-foreground">© 2025 PodReels</p>
+        {/* More button - at bottom like Instagram */}
+        <div className="relative mt-auto pt-2 border-t border-border">
+          <button
+            onClick={() => setShowMore(!showMore)}
+            className={`flex items-center gap-4 px-3 py-3 rounded-xl text-sm font-medium transition-colors w-full ${
+              showMore ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'
+            }`}
+          >
+            <MoreHorizontal className="w-6 h-6" />
+            <span>More</span>
+          </button>
+
+          {showMore && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowMore(false)} />
+              <div className="absolute bottom-full left-0 mb-2 w-56 bg-background border border-border rounded-xl shadow-xl z-50 py-2 animate-in slide-in-from-bottom-2">
+                <div className="flex items-center justify-between px-4 py-2 border-b border-border mb-1">
+                  <span className="text-sm font-semibold">More</span>
+                  <button onClick={() => setShowMore(false)}><X className="w-4 h-4 text-muted-foreground" /></button>
+                </div>
+                {moreItems.map(item => (
+                  <button
+                    key={item.label}
+                    onClick={() => { setShowMore(false); item.action(); }}
+                    className="flex items-center gap-3 px-4 py-2.5 w-full text-sm hover:bg-muted transition-colors"
+                  >
+                    <item.icon className="w-5 h-5 text-muted-foreground" />
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          <p className="px-3 pt-2 text-[10px] text-muted-foreground">© 2025 PodReels</p>
         </div>
       </aside>
 
