@@ -205,7 +205,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
   // Desktop layout
   if (!isMobile) {
     return (
-      <div className="h-screen w-full snap-start flex items-center justify-center bg-background gap-4" style={{ scrollSnapAlign: 'start' }}>
+      <div className="h-screen w-full flex items-center justify-center bg-background gap-4 snap-start snap-always" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}>
         <div className="relative h-[calc(100vh-2rem)] aspect-[9/16] max-w-[400px] bg-foreground/95 rounded-2xl overflow-hidden">
           <video
             ref={videoRef}
@@ -315,7 +315,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
 
   // Mobile layout
   return (
-    <div className="h-screen w-full relative snap-start bg-foreground/95 flex items-center justify-center" style={{ scrollSnapAlign: 'start' }}>
+    <div className="h-screen w-full relative bg-foreground/95 flex items-center justify-center snap-start snap-always" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}>
       <video
         ref={videoRef}
         src={reel.video_url}

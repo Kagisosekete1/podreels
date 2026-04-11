@@ -73,7 +73,7 @@ const BottomNav = () => {
               <div className="relative">
                 {item.icon && <item.icon className={`w-[22px] h-[22px] transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground'}`} strokeWidth={isActive ? 2.5 : 1.8} />}
                 {item.label === 'Alerts' && unreadCount > 0 && (
-                  <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-accent text-[9px] font-bold text-accent-foreground flex items-center justify-center">
+                  <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-[9px] font-bold text-white flex items-center justify-center">
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
