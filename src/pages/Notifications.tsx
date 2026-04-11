@@ -113,7 +113,7 @@ const Notifications = () => {
     fetchConversations();
   }, [user, tab]);
 
-  // Realtime chat messages
+  // Realtime chat messages (insert + delete)
   useEffect(() => {
     if (!activeChat || !user) return;
     const channel = supabase
@@ -126,6 +126,12 @@ const Notifications = () => {
             if (prev.find(m => m.id === msg.id)) return prev;
             return [...prev, msg];
           });
+        }
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, (payload) => {
+        const old = payload.old as { id: string };
+        if (old?.id) {
+          setChatMessages(prev => prev.filter(m => m.id !== old.id));
         }
       })
       .subscribe();
