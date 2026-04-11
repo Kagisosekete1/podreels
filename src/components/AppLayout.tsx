@@ -107,8 +107,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
               >
                 <div className="relative">
                   <item.icon className={`w-6 h-6 ${isActive ? 'text-primary' : ''}`} />
-                  {item.badge && item.badge > 0 && (
-                    <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-accent text-[9px] font-bold text-accent-foreground flex items-center justify-center">
+                   {item.badge && item.badge > 0 && (
+                    <span className="absolute -top-1 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
                       {item.badge > 99 ? '99+' : item.badge}
                     </span>
                   )}

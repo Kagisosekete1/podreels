@@ -113,7 +113,7 @@ const Notifications = () => {
     fetchConversations();
   }, [user, tab]);
 
-  // Realtime chat messages
+  // Realtime chat messages (insert + delete)
   useEffect(() => {
     if (!activeChat || !user) return;
     const channel = supabase
@@ -126,6 +126,12 @@ const Notifications = () => {
             if (prev.find(m => m.id === msg.id)) return prev;
             return [...prev, msg];
           });
+        }
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, (payload) => {
+        const old = payload.old as { id: string };
+        if (old?.id) {
+          setChatMessages(prev => prev.filter(m => m.id !== old.id));
         }
       })
       .subscribe();
@@ -163,11 +169,13 @@ const Notifications = () => {
     setSendingMessage(true);
     const { error } = await supabase.from('messages').insert({ sender_id: user.id, receiver_id: activeChat, content: newMessage.trim() });
     if (error) { toast.error('Failed to send'); }
-    else {
-      setChatMessages(prev => [...prev, { id: crypto.randomUUID(), sender_id: user.id, receiver_id: activeChat, content: newMessage.trim(), read: false, created_at: new Date().toISOString() }]);
-      setNewMessage('');
-    }
+    else { setNewMessage(''); }
     setSendingMessage(false);
+  };
+
+  const deleteMessage = async (msgId: string) => {
+    await supabase.from('messages').delete().eq('id', msgId);
+    setChatMessages(prev => prev.filter(m => m.id !== msgId));
   };
 
   const getIcon = (type: string) => {
@@ -209,12 +217,20 @@ const Notifications = () => {
         </header>
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {chatMessages.map(m => (
-            <div key={m.id} className={`flex ${m.sender_id === user.id ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[70%] px-3 py-2 rounded-2xl text-sm ${m.sender_id === user.id ? 'gradient-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
+            <div key={m.id} className={`flex ${m.sender_id === user.id ? 'justify-end' : 'justify-start'} group`}>
+              <div
+                className={`max-w-[70%] px-3 py-2 rounded-2xl text-sm relative ${m.sender_id === user.id ? 'gradient-primary text-primary-foreground' : 'bg-muted text-foreground'}`}
+              >
                 {m.content}
                 <p className={`text-[9px] mt-0.5 ${m.sender_id === user.id ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
                   {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
                 </p>
+                <button
+                  onClick={() => { if (confirm('Delete this message for everyone?')) deleteMessage(m.id); }}
+                  className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] items-center justify-center hidden group-hover:flex"
+                >
+                  ×
+                </button>
               </div>
             </div>
           ))}

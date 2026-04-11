@@ -44,6 +44,8 @@ const Feed = () => {
   const [loading, setLoading] = useState(true);
   const [likedReels, setLikedReels] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
+  const isScrolling = useRef(false);
+  const scrollTimeout = useRef<NodeJS.Timeout>();
 
   const fetchReels = useCallback(async () => {
     const { data, error } = await supabase
@@ -80,13 +82,49 @@ const Feed = () => {
 
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return;
+    
+    // Debounce to detect when scrolling stops
+    if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+    isScrolling.current = true;
+    
+    scrollTimeout.current = setTimeout(() => {
+      isScrolling.current = false;
+      if (!containerRef.current) return;
+      const scrollTop = containerRef.current.scrollTop;
+      const height = containerRef.current.clientHeight;
+      const newIndex = Math.round(scrollTop / height);
+      const clampedIndex = Math.max(0, Math.min(newIndex, reels.length - 1));
+      
+      // Snap to the nearest reel
+      containerRef.current.scrollTo({
+        top: clampedIndex * height,
+        behavior: 'smooth'
+      });
+      
+      if (clampedIndex !== currentIndex) {
+        setCurrentIndex(clampedIndex);
+      }
+    }, 100);
+  }, [currentIndex, reels.length]);
+
+  // Also update index based on scroll position for snap scroll
+  const handleScrollEnd = useCallback(() => {
+    if (!containerRef.current) return;
     const scrollTop = containerRef.current.scrollTop;
     const height = containerRef.current.clientHeight;
     const newIndex = Math.round(scrollTop / height);
-    if (newIndex !== currentIndex) {
-      setCurrentIndex(newIndex);
+    const clampedIndex = Math.max(0, Math.min(newIndex, reels.length - 1));
+    if (clampedIndex !== currentIndex) {
+      setCurrentIndex(clampedIndex);
     }
-  }, [currentIndex]);
+  }, [currentIndex, reels.length]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    container.addEventListener('scrollend', handleScrollEnd);
+    return () => container.removeEventListener('scrollend', handleScrollEnd);
+  }, [handleScrollEnd]);
 
   const toggleLike = async (reelId: string) => {
     if (!user) return;
@@ -138,8 +176,8 @@ const Feed = () => {
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-scroll snap-mandatory hide-scrollbar"
-        style={{ scrollSnapType: 'y mandatory' }}
+        className="flex-1 overflow-y-scroll snap-y snap-mandatory hide-scrollbar overscroll-none"
+        style={{ scrollSnapType: 'y mandatory', scrollSnapStop: 'always' }}
       >
         {reels.map((reel, index) => (
           <ReelPlayer
