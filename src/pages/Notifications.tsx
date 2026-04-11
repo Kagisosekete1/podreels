@@ -169,11 +169,13 @@ const Notifications = () => {
     setSendingMessage(true);
     const { error } = await supabase.from('messages').insert({ sender_id: user.id, receiver_id: activeChat, content: newMessage.trim() });
     if (error) { toast.error('Failed to send'); }
-    else {
-      setChatMessages(prev => [...prev, { id: crypto.randomUUID(), sender_id: user.id, receiver_id: activeChat, content: newMessage.trim(), read: false, created_at: new Date().toISOString() }]);
-      setNewMessage('');
-    }
+    else { setNewMessage(''); }
     setSendingMessage(false);
+  };
+
+  const deleteMessage = async (msgId: string) => {
+    await supabase.from('messages').delete().eq('id', msgId);
+    setChatMessages(prev => prev.filter(m => m.id !== msgId));
   };
 
   const getIcon = (type: string) => {
