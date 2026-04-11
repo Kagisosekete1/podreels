@@ -71,7 +71,9 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
   const [likesCount, setLikesCount] = useState(reel.likes_count);
   const [commentsCount, setCommentsCount] = useState(reel.comments_count);
   const [progress, setProgress] = useState(0);
+  const [showContinue, setShowContinue] = useState(false);
   const viewCounted = useRef(false);
+  const loopCount = useRef(0);
 
   useEffect(() => {
     setLikesCount(reel.likes_count);
@@ -113,17 +115,47 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
     }
   }, []);
 
+  // Handle loop count - pause after 4 plays
+  const handleVideoEnded = useCallback(() => {
+    loopCount.current += 1;
+    if (loopCount.current >= 4 && videoRef.current) {
+      videoRef.current.pause();
+      setIsPlaying(false);
+      setShowContinue(true);
+    }
+  }, []);
+
+  const handleContinuePlaying = () => {
+    setShowContinue(false);
+    loopCount.current = 0;
+    if (videoRef.current) {
+      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+    }
+  };
+
   useEffect(() => {
     if (!videoRef.current) return;
+    const v = videoRef.current;
     if (isActive) {
-      videoRef.current.muted = false;
-      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {
-        // Autoplay blocked, try muted
-        if (videoRef.current) {
-          videoRef.current.muted = true;
-          videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-        }
-      });
+      loopCount.current = 0;
+      setShowContinue(false);
+      v.currentTime = 0;
+      v.muted = false;
+      // Try unmuted first, then muted fallback
+      const tryPlay = () => {
+        v.play().then(() => {
+          setIsPlaying(true);
+          // Attempt to unmute after interaction
+          v.muted = false;
+        }).catch(() => {
+          v.muted = true;
+          v.play().then(() => {
+            setIsPlaying(true);
+          }).catch(() => {});
+        });
+      };
+      // Play immediately
+      tryPlay();
       if (!viewCounted.current && user) {
         viewCounted.current = true;
         supabase.rpc('increment_view_safe', { reel_uuid: reel.id, viewer_id: user.id });
@@ -132,11 +164,13 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         supabase.rpc('increment_view', { reel_uuid: reel.id });
       }
     } else {
-      videoRef.current.pause();
-      videoRef.current.currentTime = 0;
+      v.pause();
+      v.currentTime = 0;
       setIsPlaying(false);
       setExpanded(false);
       setProgress(0);
+      setShowContinue(false);
+      loopCount.current = 0;
     }
   }, [isActive, reel.id, user]);
 
@@ -211,12 +245,21 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
             ref={videoRef}
             src={reel.video_url}
             className="absolute inset-0 w-full h-full object-contain bg-black"
-            loop
+            loop={loopCount.current < 3}
             playsInline
             onClick={togglePlay}
             onTimeUpdate={handleTimeUpdate}
+            onEnded={handleVideoEnded}
           />
-          {!isPlaying && (
+          {showContinue && (
+            <button onClick={handleContinuePlaying} className="absolute inset-0 flex items-center justify-center z-20 bg-black/50 backdrop-blur-sm">
+              <div className="flex flex-col items-center gap-3">
+                <Play className="w-12 h-12 text-white fill-white" />
+                <span className="text-white font-semibold text-sm">Continue Playing</span>
+              </div>
+            </button>
+          )}
+          {!isPlaying && !showContinue && (
             <button onClick={togglePlay} className="absolute inset-0 flex items-center justify-center z-10">
               <div className="w-14 h-14 rounded-full bg-background/30 backdrop-blur-sm flex items-center justify-center">
                 <Play className="w-7 h-7 text-primary-foreground fill-current ml-0.5" />
@@ -320,13 +363,23 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         ref={videoRef}
         src={reel.video_url}
         className="absolute inset-0 w-full h-full object-cover"
-        loop
+        loop={loopCount.current < 3}
         playsInline
         onClick={togglePlay}
         onTimeUpdate={handleTimeUpdate}
+        onEnded={handleVideoEnded}
       />
 
-      {!isPlaying && (
+      {showContinue && (
+        <button onClick={handleContinuePlaying} className="absolute inset-0 flex items-center justify-center z-20 bg-black/50 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-3">
+            <Play className="w-14 h-14 text-white fill-white" />
+            <span className="text-white font-semibold text-base">Continue Playing</span>
+          </div>
+        </button>
+      )}
+
+      {!isPlaying && !showContinue && (
         <button onClick={togglePlay} className="absolute inset-0 flex items-center justify-center z-10">
           <div className="w-14 h-14 rounded-full bg-background/30 backdrop-blur-sm flex items-center justify-center">
             <Play className="w-7 h-7 text-primary-foreground fill-current ml-0.5" />
