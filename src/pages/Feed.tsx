@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import ReelPlayer from '@/components/ReelPlayer';
@@ -39,6 +40,8 @@ const shuffle = <T,>(arr: T[]): T[] => {
 
 const Feed = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const targetReelId = searchParams.get('reel');
   const [reels, setReels] = useState<ReelWithProfile[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -46,6 +49,7 @@ const Feed = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const isScrolling = useRef(false);
   const scrollTimeout = useRef<NodeJS.Timeout>();
+  const didJumpToTarget = useRef(false);
 
   const fetchReels = useCallback(async () => {
     const { data, error } = await supabase
@@ -55,10 +59,42 @@ const Feed = () => {
       .limit(50);
 
     if (!error && data) {
-      setReels(shuffle(data as unknown as ReelWithProfile[]));
+      const list = data as unknown as ReelWithProfile[];
+      if (targetReelId) {
+        // Move target to the front so the player opens on it
+        const target = list.find(r => r.id === targetReelId);
+        const rest = shuffle(list.filter(r => r.id !== targetReelId));
+        if (target) {
+          setReels([target, ...rest]);
+        } else {
+          // Target wasn't in the first page — fetch it directly and prepend
+          const { data: extra } = await supabase
+            .from('reels')
+            .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster)')
+            .eq('id', targetReelId)
+            .maybeSingle();
+          if (extra) {
+            setReels([extra as unknown as ReelWithProfile, ...rest]);
+          } else {
+            setReels(shuffle(list));
+          }
+        }
+      } else {
+        setReels(shuffle(list));
+      }
     }
     setLoading(false);
-  }, []);
+  }, [targetReelId]);
+
+  // When list is ready and a target was requested, ensure index 0 is active and scroll to top
+  useEffect(() => {
+    if (!targetReelId || didJumpToTarget.current || reels.length === 0) return;
+    didJumpToTarget.current = true;
+    setCurrentIndex(0);
+    requestAnimationFrame(() => {
+      containerRef.current?.scrollTo({ top: 0, behavior: 'auto' });
+    });
+  }, [reels, targetReelId]);
 
   useEffect(() => {
     fetchReels();
