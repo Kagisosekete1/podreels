@@ -2,8 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
-import { Search, TrendingUp, Hash, Eye, Play, Pause } from 'lucide-react';
+import { Search, TrendingUp, Hash, Eye, Play, Pause, X } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
+import ReelPlayer from '@/components/ReelPlayer';
+import { useAuth } from '@/contexts/AuthContext';
 
 const BASE_CATEGORIES = ['All', 'Comedy', 'True Crime', 'Tech', 'Business', 'Health', 'Education', 'News', 'Sports', 'Music', 'Lifestyle', 'Science', 'Other'];
 
@@ -25,6 +27,7 @@ interface ProfileMap {
 
 const Discover = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [reels, setReels] = useState<ReelThumb[]>([]);
@@ -33,6 +36,8 @@ const Discover = () => {
   const [dynamicCategories, setDynamicCategories] = useState<string[]>([]);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
+  const [openReel, setOpenReel] = useState<any | null>(null);
+  const [openLiked, setOpenLiked] = useState(false);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -147,6 +152,47 @@ const Discover = () => {
     };
   }, []);
 
+  const openInPlayer = async (reelId: string) => {
+    // Pause any inline previews
+    Object.values(videoRefs.current).forEach(v => { if (v) v.pause(); });
+    setPlayingId(null);
+    const { data } = await supabase
+      .from('reels')
+      .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster)')
+      .eq('id', reelId)
+      .maybeSingle();
+    if (!data) return;
+    setOpenReel(data);
+    if (user) {
+      const { data: like } = await supabase
+        .from('likes').select('id').eq('user_id', user.id).eq('reel_id', reelId).maybeSingle();
+      setOpenLiked(!!like);
+    } else {
+      setOpenLiked(false);
+    }
+  };
+
+  const toggleOpenLike = async () => {
+    if (!user || !openReel) return;
+    if (openLiked) {
+      setOpenLiked(false);
+      await supabase.from('likes').delete().eq('user_id', user.id).eq('reel_id', openReel.id);
+      await supabase.from('reels').update({ likes_count: Math.max(0, (openReel.likes_count || 0) - 1) }).eq('id', openReel.id);
+    } else {
+      setOpenLiked(true);
+      await supabase.from('likes').insert({ user_id: user.id, reel_id: openReel.id });
+      await supabase.from('reels').update({ likes_count: (openReel.likes_count || 0) + 1 }).eq('id', openReel.id);
+    }
+  };
+
+  // ESC closes overlay
+  useEffect(() => {
+    if (!openReel) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpenReel(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [openReel]);
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border p-4 space-y-3">
@@ -211,7 +257,7 @@ const Discover = () => {
             return (
               <button
                 key={reel.id}
-                onClick={(e) => togglePreview(e, reel.id)}
+                onClick={() => openInPlayer(reel.id)}
                 className="aspect-[9/16] bg-muted relative overflow-hidden rounded-lg"
               >
                 {reel.thumbnail_url && !isPreviewing && (
@@ -262,6 +308,24 @@ const Discover = () => {
       </div>
 
       <BottomNav />
+
+      {openReel && (
+        <div className="fixed inset-0 z-[100] bg-background">
+          <button
+            onClick={() => setOpenReel(null)}
+            aria-label="Close"
+            className="absolute top-4 right-4 z-[110] w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/80 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <ReelPlayer
+            reel={openReel}
+            isActive={true}
+            isLiked={openLiked}
+            onToggleLike={toggleOpenLike}
+          />
+        </div>
+      )}
     </div>
   );
 };
