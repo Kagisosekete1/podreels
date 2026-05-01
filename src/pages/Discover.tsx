@@ -211,7 +211,7 @@ const Discover = () => {
             return (
               <button
                 key={reel.id}
-                onClick={() => navigate(`/feed?reel=${reel.id}`)}
+                onClick={(e) => togglePreview(e, reel.id)}
                 className="aspect-[9/16] bg-muted relative overflow-hidden rounded-lg"
               >
                 {reel.thumbnail_url && !isPreviewing && (
