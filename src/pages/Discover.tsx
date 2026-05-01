@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
-import { Search, TrendingUp, Hash } from 'lucide-react';
+import { Search, TrendingUp, Hash, Eye } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 
 const BASE_CATEGORIES = ['All', 'Comedy', 'True Crime', 'Tech', 'Business', 'Health', 'Education', 'News', 'Sports', 'Music', 'Lifestyle', 'Science', 'Other'];
@@ -97,6 +97,26 @@ const Discover = () => {
 
   const allCategories = [...BASE_CATEGORIES, ...dynamicCategories.filter(c => !BASE_CATEGORIES.includes(c))];
 
+  // Realtime: subscribe to view_count updates for visible reels
+  useEffect(() => {
+    if (reels.length === 0) return;
+    const channel = supabase
+      .channel('discover-reel-views')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'reels' }, (payload) => {
+        const n = payload.new as any;
+        if (!n) return;
+        setReels(prev => prev.map(r => r.id === n.id ? { ...r, views_count: n.views_count, likes_count: n.likes_count } : r));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [reels.length]);
+
+  const formatCount = (n: number) => {
+    if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+    if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+    return n.toString();
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border p-4 space-y-3">
@@ -154,7 +174,7 @@ const Discover = () => {
             <span className="text-sm font-semibold">Popular PodReels</span>
           </div>
         )}
-        <div className="grid grid-cols-2 gap-1">
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-1">
           {reels.map((reel) => {
             const profile = profiles[reel.user_id];
             return (
@@ -169,6 +189,10 @@ const Discover = () => {
                   <video src={reel.video_url} className="w-full h-full object-cover" muted preload="metadata" />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 to-transparent" />
+                <div className="absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/55 backdrop-blur-sm">
+                  <Eye className="w-2.5 h-2.5 text-white" />
+                  <span className="text-white text-[10px] font-semibold leading-none">{formatCount(reel.views_count)}</span>
+                </div>
                 <div className="absolute bottom-2 left-2 right-2">
                   <p className="text-primary-foreground text-xs font-medium line-clamp-2">{reel.title}</p>
                   {profile && (
@@ -178,19 +202,6 @@ const Discover = () => {
                     >
                       @{profile.username}
                     </button>
-                  )}
-                  {reel.hashtags && reel.hashtags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {reel.hashtags.slice(0, 3).map(tag => (
-                        <button
-                          key={tag}
-                          onClick={(e) => { e.stopPropagation(); navigate(`/hashtag/${tag}`); }}
-                          className="text-blue-400 text-[10px] font-medium"
-                        >
-                          #{tag}
-                        </button>
-                      ))}
-                    </div>
                   )}
                 </div>
               </button>
