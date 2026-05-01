@@ -158,12 +158,12 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 ml-[220px] xl:ml-[245px] xl:mr-[300px] min-h-screen">
+      <main className={`flex-1 ml-[220px] xl:ml-[245px] min-h-screen ${location.pathname === '/discover' ? '' : 'xl:mr-[300px]'}`}>
         {children}
       </main>
 
-      {/* Right Sidebar - Trends */}
-      <aside className="hidden xl:block fixed right-0 top-0 bottom-0 w-[300px] border-l border-border bg-background p-4 overflow-y-auto">
+      {/* Right Sidebar - Trends (hidden on Discover, which has its own trending section) */}
+      <aside className={`${location.pathname === '/discover' ? 'hidden' : 'hidden xl:block'} fixed right-0 top-0 bottom-0 w-[300px] border-l border-border bg-background p-4 overflow-y-auto`}>
         <div className="mt-4">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="w-5 h-5 text-accent" />
