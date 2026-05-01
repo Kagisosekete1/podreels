@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
-import { Search, TrendingUp, Hash, Eye } from 'lucide-react';
+import { Search, TrendingUp, Hash, Eye, Play, Pause } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 
 const BASE_CATEGORIES = ['All', 'Comedy', 'True Crime', 'Tech', 'Business', 'Health', 'Education', 'News', 'Sports', 'Music', 'Lifestyle', 'Science', 'Other'];
@@ -31,6 +31,8 @@ const Discover = () => {
   const [profiles, setProfiles] = useState<ProfileMap>({});
   const [trendingHashtags, setTrendingHashtags] = useState<{ tag: string; count: number }[]>([]);
   const [dynamicCategories, setDynamicCategories] = useState<string[]>([]);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+  const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -38,8 +40,7 @@ const Discover = () => {
       let query = supabase
         .from('reels')
         .select('id, title, thumbnail_url, video_url, views_count, likes_count, category, hashtags, user_id')
-        .order('views_count', { ascending: false })
-        .limit(30);
+        .order('views_count', { ascending: false });
 
       if (selectedCategory !== 'All' && selectedCategory !== 'Other') {
         query = query.eq('category', selectedCategory);
@@ -116,6 +117,35 @@ const Discover = () => {
     if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
     return n.toString();
   };
+
+  const togglePreview = (e: React.MouseEvent, reelId: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    // Pause everything else first
+    Object.entries(videoRefs.current).forEach(([id, v]) => {
+      if (v && id !== reelId) { v.pause(); v.currentTime = 0; }
+    });
+    const v = videoRefs.current[reelId];
+    if (!v) return;
+    if (playingId === reelId) {
+      v.pause();
+      setPlayingId(null);
+    } else {
+      v.muted = false;
+      v.play().catch(() => {
+        v.muted = true;
+        v.play().catch(() => {});
+      });
+      setPlayingId(reelId);
+    }
+  };
+
+  // Stop all previews on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(videoRefs.current).forEach(v => { if (v) { v.pause(); } });
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background pb-20">
