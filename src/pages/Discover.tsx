@@ -38,7 +38,9 @@ const Discover = () => {
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const [openReel, setOpenReel] = useState<any | null>(null);
   const [openLiked, setOpenLiked] = useState(false);
-  const [overlayMuted, setOverlayMuted] = useState(false);
+  // Start muted so restored reels don't blast audio without user intent (esp. iOS).
+  const [overlayMuted, setOverlayMuted] = useState(true);
+  const [restoredWithoutAutoplay, setRestoredWithoutAutoplay] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [debugInfo, setDebugInfo] = useState<{ lastViewedAt: string | null; canCount: boolean; nextEligibleAt: string | null } | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -210,6 +212,7 @@ const Discover = () => {
   useEffect(() => {
     const lastId = localStorage.getItem('discover:lastOpenReel');
     if (lastId) {
+      setRestoredWithoutAutoplay(true);
       openInPlayer(lastId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -281,17 +284,46 @@ const Discover = () => {
     };
   }, [openReel, isAdmin, user]);
 
-  // Apply mute state to overlay video
+  // Keep overlay video's mute state in sync (in case ReelPlayer re-applies it).
   useEffect(() => {
     if (!openReel) return;
     const v = overlayRef.current?.querySelector('video') as HTMLVideoElement | null;
     if (v) v.muted = overlayMuted;
   }, [overlayMuted, openReel]);
 
+  // If restored after refresh, pause the overlay video so nothing plays until tap.
+  useEffect(() => {
+    if (!openReel || !restoredWithoutAutoplay) return;
+    const tryPause = () => {
+      const v = overlayRef.current?.querySelector('video') as HTMLVideoElement | null;
+      if (v) { v.pause(); v.muted = true; }
+    };
+    // Pause on mount and shortly after, since ReelPlayer auto-plays in its effect.
+    tryPause();
+    const t1 = setTimeout(tryPause, 50);
+    const t2 = setTimeout(tryPause, 200);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [openReel, restoredWithoutAutoplay]);
+
+  // Toggle overlay mute synchronously inside the user gesture (iOS requirement).
+  const toggleOverlayMute = () => {
+    const v = overlayRef.current?.querySelector('video') as HTMLVideoElement | null;
+    const next = !overlayMuted;
+    if (v) {
+      v.muted = next;
+      // Calling play() in the same gesture is what allows iOS to honor unmute.
+      v.play().catch(() => {});
+    }
+    setOverlayMuted(next);
+    if (restoredWithoutAutoplay) setRestoredWithoutAutoplay(false);
+  };
+
   const closeOverlay = () => {
     localStorage.removeItem('discover:lastOpenReel');
     setOpenReel(null);
     setDebugInfo(null);
+    setRestoredWithoutAutoplay(false);
+    setOverlayMuted(true);
   };
 
   return (
@@ -426,7 +458,7 @@ const Discover = () => {
             <X className="w-5 h-5" />
           </button>
           <button
-            onClick={() => setOverlayMuted(m => !m)}
+            onClick={toggleOverlayMute}
             aria-label={overlayMuted ? 'Unmute' : 'Mute'}
             className="absolute top-4 right-16 z-[110] w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/80 transition-colors"
           >
