@@ -74,6 +74,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
   const [showContinue, setShowContinue] = useState(false);
   const viewCounted = useRef(false);
   const loopCount = useRef(0);
+  const [, forceRerender] = useState(0);
 
   useEffect(() => {
     setLikesCount(reel.likes_count);
@@ -122,7 +123,12 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       videoRef.current.pause();
       setIsPlaying(false);
       setShowContinue(true);
+    } else if (videoRef.current) {
+      // manual loop so onEnded keeps firing
+      videoRef.current.currentTime = 0;
+      videoRef.current.play().catch(() => {});
     }
+    forceRerender((n) => n + 1);
   }, []);
 
   const handleContinuePlaying = () => {
@@ -176,8 +182,16 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
 
   const togglePlay = () => {
     if (!videoRef.current) return;
-    if (isPlaying) { videoRef.current.pause(); setIsPlaying(false); }
-    else { videoRef.current.play(); setIsPlaying(true); }
+    const v = videoRef.current;
+    if (isPlaying) {
+      v.pause();
+      setIsPlaying(false);
+    } else {
+      v.play().then(() => setIsPlaying(true)).catch(() => {
+        v.muted = true;
+        v.play().then(() => setIsPlaying(true)).catch(() => {});
+      });
+    }
   };
 
   const handleShare = async () => {
@@ -245,7 +259,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
             ref={videoRef}
             src={reel.video_url}
             className="absolute inset-0 w-full h-full object-contain bg-black"
-            loop={loopCount.current < 3}
+            loop={false}
             playsInline
             onClick={togglePlay}
             onTimeUpdate={handleTimeUpdate}
@@ -363,7 +377,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         ref={videoRef}
         src={reel.video_url}
         className="absolute inset-0 w-full h-full object-cover"
-        loop={loopCount.current < 3}
+        loop={false}
         playsInline
         onClick={togglePlay}
         onTimeUpdate={handleTimeUpdate}

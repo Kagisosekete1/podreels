@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
-import { Search, TrendingUp, Hash, Eye, Play, Pause, X } from 'lucide-react';
+import { Search, TrendingUp, Hash, Eye, Play, Pause, X, Volume2, VolumeX, Bug } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import ReelPlayer from '@/components/ReelPlayer';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,6 +38,19 @@ const Discover = () => {
   const videoRefs = useRef<Record<string, HTMLVideoElement | null>>({});
   const [openReel, setOpenReel] = useState<any | null>(null);
   const [openLiked, setOpenLiked] = useState(false);
+  const [overlayMuted, setOverlayMuted] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<{ lastViewedAt: string | null; canCount: boolean; nextEligibleAt: string | null } | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const lastFocusRef = useRef<HTMLElement | null>(null);
+
+  // Check admin role
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' }).then(({ data }) => {
+      setIsAdmin(!!data);
+    });
+  }, [user]);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -193,6 +206,94 @@ const Discover = () => {
     return () => window.removeEventListener('keydown', onKey);
   }, [openReel]);
 
+  // Restore last opened reel from localStorage on mount
+  useEffect(() => {
+    const lastId = localStorage.getItem('discover:lastOpenReel');
+    if (lastId) {
+      openInPlayer(lastId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist last opened reel + body scroll lock + focus trap + pause inline previews + load debug info
+  useEffect(() => {
+    if (!openReel) {
+      document.body.style.overflow = '';
+      if (lastFocusRef.current) { lastFocusRef.current.focus?.(); lastFocusRef.current = null; }
+      return;
+    }
+    localStorage.setItem('discover:lastOpenReel', openReel.id);
+
+    // Pause every inline preview
+    Object.values(videoRefs.current).forEach(v => { if (v) { v.pause(); } });
+    setPlayingId(null);
+
+    // Body scroll lock
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    // Focus trap
+    lastFocusRef.current = document.activeElement as HTMLElement;
+    const node = overlayRef.current;
+    const focusables = () => node ? Array.from(node.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )).filter(el => !el.hasAttribute('disabled')) : [];
+    setTimeout(() => focusables()[0]?.focus(), 50);
+    const onTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const list = focusables();
+      if (list.length === 0) return;
+      const first = list[0]; const last = list[list.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    window.addEventListener('keydown', onTab);
+
+    // Load debug info if admin
+    if (isAdmin && user) {
+      supabase.from('reel_views')
+        .select('viewed_at')
+        .eq('reel_id', openReel.id)
+        .eq('user_id', user.id)
+        .order('viewed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.viewed_at) {
+            const last = new Date(data.viewed_at);
+            const next = new Date(last.getTime() + 24 * 3600 * 1000);
+            setDebugInfo({
+              lastViewedAt: last.toISOString(),
+              canCount: next < new Date(),
+              nextEligibleAt: next.toISOString(),
+            });
+          } else {
+            setDebugInfo({ lastViewedAt: null, canCount: true, nextEligibleAt: null });
+          }
+        });
+    } else {
+      setDebugInfo(null);
+    }
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', onTab);
+    };
+  }, [openReel, isAdmin, user]);
+
+  // Apply mute state to overlay video
+  useEffect(() => {
+    if (!openReel) return;
+    const v = overlayRef.current?.querySelector('video') as HTMLVideoElement | null;
+    if (v) v.muted = overlayMuted;
+  }, [overlayMuted, openReel]);
+
+  const closeOverlay = () => {
+    localStorage.removeItem('discover:lastOpenReel');
+    setOpenReel(null);
+    setDebugInfo(null);
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border p-4 space-y-3">
@@ -310,14 +411,39 @@ const Discover = () => {
       <BottomNav />
 
       {openReel && (
-        <div className="fixed inset-0 z-[100] bg-background">
+        <div
+          ref={overlayRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Reel player"
+          className="fixed inset-0 z-[100] bg-background"
+        >
           <button
-            onClick={() => setOpenReel(null)}
+            onClick={closeOverlay}
             aria-label="Close"
             className="absolute top-4 right-4 z-[110] w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/80 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
+          <button
+            onClick={() => setOverlayMuted(m => !m)}
+            aria-label={overlayMuted ? 'Unmute' : 'Mute'}
+            className="absolute top-4 right-16 z-[110] w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/80 transition-colors"
+          >
+            {overlayMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+          </button>
+          {isAdmin && debugInfo && (
+            <div className="absolute top-4 left-4 z-[110] max-w-xs px-3 py-2 rounded-lg bg-black/70 backdrop-blur-sm text-white text-[11px] space-y-0.5">
+              <div className="flex items-center gap-1.5 font-semibold">
+                <Bug className="w-3 h-3" /> View dedup (24h)
+              </div>
+              <div>Last viewed: {debugInfo.lastViewedAt ? new Date(debugInfo.lastViewedAt).toLocaleString() : 'never'}</div>
+              <div>Counts now: <span className={debugInfo.canCount ? 'text-green-400' : 'text-red-400'}>{debugInfo.canCount ? 'YES' : 'NO'}</span></div>
+              {debugInfo.nextEligibleAt && !debugInfo.canCount && (
+                <div>Next eligible: {new Date(debugInfo.nextEligibleAt).toLocaleString()}</div>
+              )}
+            </div>
+          )}
           <ReelPlayer
             reel={openReel}
             isActive={true}
