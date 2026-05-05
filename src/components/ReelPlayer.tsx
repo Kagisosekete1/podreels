@@ -259,7 +259,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
             ref={videoRef}
             src={reel.video_url}
             className="absolute inset-0 w-full h-full object-contain bg-black"
-            loop={loopCount.current < 3}
+            loop={false}
             playsInline
             onClick={togglePlay}
             onTimeUpdate={handleTimeUpdate}
@@ -377,7 +377,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         ref={videoRef}
         src={reel.video_url}
         className="absolute inset-0 w-full h-full object-cover"
-        loop={loopCount.current < 3}
+        loop={false}
         playsInline
         onClick={togglePlay}
         onTimeUpdate={handleTimeUpdate}
