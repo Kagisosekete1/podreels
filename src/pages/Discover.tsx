@@ -141,6 +141,8 @@ const Discover = () => {
   const togglePreview = (e: React.MouseEvent, reelId: string) => {
     e.stopPropagation();
     e.preventDefault();
+    // Block inline preview while the fullscreen overlay is open.
+    if (openReel) return;
     // Pause everything else first
     Object.entries(videoRefs.current).forEach(([id, v]) => {
       if (v && id !== reelId) { v.pause(); v.currentTime = 0; }
