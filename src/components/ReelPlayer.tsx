@@ -406,7 +406,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
 
         <CommentsSheet reelId={reel.id} isOpen={showComments} onClose={() => setShowComments(false)} />
         {showAd && (
-          <div className="absolute inset-0 z-30 pointer-events-auto">
+          <div className="fixed inset-0 z-[120] pointer-events-auto">
             <AdOverlay onClose={handleAdClose} />
           </div>
         )}
