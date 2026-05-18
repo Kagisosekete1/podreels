@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Heart, MessageCircle, Share2, Play, Bookmark, Send, Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import CommentsSheet from '@/components/CommentsSheet';
+import AdOverlay from '@/components/AdOverlay';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -75,6 +76,11 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
   const viewCounted = useRef(false);
   const loopCount = useRef(0);
   const [, forceRerender] = useState(0);
+  const [showAd, setShowAd] = useState(false);
+  const adShownForThisActivation = useRef(false);
+
+  // Show an ad after every N reel plays (per session).
+  const AD_AFTER_PLAYS = 2;
 
   useEffect(() => {
     setLikesCount(reel.likes_count);
@@ -147,6 +153,22 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       setShowContinue(false);
       v.currentTime = 0;
       v.muted = false;
+      adShownForThisActivation.current = false;
+
+      // Increment session play counter and decide whether to show an ad first.
+      try {
+        const key = 'reels:playCount';
+        const next = (parseInt(sessionStorage.getItem(key) || '0', 10) || 0) + 1;
+        sessionStorage.setItem(key, String(next));
+        if (next > 0 && next % AD_AFTER_PLAYS === 0) {
+          adShownForThisActivation.current = true;
+          setShowAd(true);
+          v.pause();
+          setIsPlaying(false);
+          return; // wait for ad dismissal before autoplay
+        }
+      } catch {}
+
       // Try unmuted first, then muted fallback
       const tryPlay = () => {
         v.play().then(() => {
@@ -177,6 +199,23 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       setProgress(0);
       setShowContinue(false);
       loopCount.current = 0;
+      setShowAd(false);
+    }
+  }, [isActive, reel.id, user]);
+
+  const handleAdClose = useCallback(() => {
+    setShowAd(false);
+    if (videoRef.current && isActive) {
+      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {
+        if (videoRef.current) {
+          videoRef.current.muted = true;
+          videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+        }
+      });
+      if (!viewCounted.current && user) {
+        viewCounted.current = true;
+        supabase.rpc('increment_view_safe', { reel_uuid: reel.id, viewer_id: user.id });
+      }
     }
   }, [isActive, reel.id, user]);
 
@@ -366,6 +405,11 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         </div>
 
         <CommentsSheet reelId={reel.id} isOpen={showComments} onClose={() => setShowComments(false)} />
+        {showAd && (
+          <div className="fixed inset-0 z-[120] pointer-events-auto">
+            <AdOverlay onClose={handleAdClose} />
+          </div>
+        )}
       </div>
     );
   }
@@ -498,6 +542,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       </div>
 
       <CommentsSheet reelId={reel.id} isOpen={showComments} onClose={() => setShowComments(false)} />
+      {showAd && <AdOverlay onClose={handleAdClose} />}
     </div>
   );
 };
