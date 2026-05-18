@@ -405,6 +405,11 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         </div>
 
         <CommentsSheet reelId={reel.id} isOpen={showComments} onClose={() => setShowComments(false)} />
+        {showAd && (
+          <div className="absolute inset-0 z-30 pointer-events-auto">
+            <AdOverlay onClose={handleAdClose} />
+          </div>
+        )}
       </div>
     );
   }
@@ -537,6 +542,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       </div>
 
       <CommentsSheet reelId={reel.id} isOpen={showComments} onClose={() => setShowComments(false)} />
+      {showAd && <AdOverlay onClose={handleAdClose} />}
     </div>
   );
 };
