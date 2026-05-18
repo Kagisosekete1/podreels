@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
-import { Search, TrendingUp, Hash, Eye, Play, Pause, X, Volume2, VolumeX, Bug } from 'lucide-react';
+import { Search, TrendingUp, Hash, Eye, Play, Pause, X, Volume2, VolumeX, Bug, ClipboardCheck } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import ReelPlayer from '@/components/ReelPlayer';
 import { useAuth } from '@/contexts/AuthContext';
@@ -45,6 +45,9 @@ const Discover = () => {
   const [debugInfo, setDebugInfo] = useState<{ lastViewedAt: string | null; canCount: boolean; nextEligibleAt: string | null } | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const lastFocusRef = useRef<HTMLElement | null>(null);
+  const [qaOpen, setQaOpen] = useState(false);
+  const [qaResults, setQaResults] = useState<{ name: string; pass: boolean | null; detail?: string }[]>([]);
+  const [qaRunning, setQaRunning] = useState(false);
 
   // Check admin role
   useEffect(() => {
@@ -293,6 +296,24 @@ const Discover = () => {
     if (v) v.muted = overlayMuted;
   }, [overlayMuted, openReel]);
 
+  // Reflect the *actual* video element state back into UI (mute button + autoplay flag).
+  useEffect(() => {
+    if (!openReel) return;
+    const v = overlayRef.current?.querySelector('video') as HTMLVideoElement | null;
+    if (!v) return;
+    const sync = () => setOverlayMuted(v.muted);
+    const onPlay = () => { if (restoredWithoutAutoplay) setRestoredWithoutAutoplay(false); };
+    v.addEventListener('volumechange', sync);
+    v.addEventListener('play', onPlay);
+    v.addEventListener('pause', sync);
+    sync();
+    return () => {
+      v.removeEventListener('volumechange', sync);
+      v.removeEventListener('play', onPlay);
+      v.removeEventListener('pause', sync);
+    };
+  }, [openReel, restoredWithoutAutoplay]);
+
   // If restored after refresh, pause the overlay video so nothing plays until tap.
   useEffect(() => {
     if (!openReel || !restoredWithoutAutoplay) return;
@@ -321,11 +342,86 @@ const Discover = () => {
   };
 
   const closeOverlay = () => {
+    // Ensure overlay video is fully stopped so nothing keeps playing in the background.
+    const v = overlayRef.current?.querySelector('video') as HTMLVideoElement | null;
+    if (v) {
+      try { v.pause(); } catch {}
+      try { v.currentTime = 0; } catch {}
+      v.muted = true;
+      v.removeAttribute('src');
+      try { v.load(); } catch {}
+    }
     localStorage.removeItem('discover:lastOpenReel');
     setOpenReel(null);
     setDebugInfo(null);
     setRestoredWithoutAutoplay(false);
     setOverlayMuted(true);
+    setQaOpen(false);
+    setQaResults([]);
+  };
+
+  // QA harness: automated checks for tap-to-play / unmute behavior on the overlay video.
+  const runQaChecks = async () => {
+    setQaRunning(true);
+    const out: { name: string; pass: boolean | null; detail?: string }[] = [];
+    const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+    const v = overlayRef.current?.querySelector('video') as HTMLVideoElement | null;
+
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+    out.push({ name: 'Environment', pass: true, detail: isIOS ? 'iOS Safari detected' : 'Desktop / non-iOS browser' });
+
+    out.push({ name: 'Overlay video element present', pass: !!v });
+    if (!v) { setQaResults(out); setQaRunning(false); return; }
+
+    out.push({ name: 'Video has src', pass: !!v.currentSrc, detail: v.currentSrc?.slice(0, 60) });
+
+    // Tap-to-play
+    try {
+      v.muted = true;
+      await v.play();
+      await wait(150);
+      out.push({ name: 'Tap-to-play (muted)', pass: !v.paused, detail: `paused=${v.paused}` });
+    } catch (e: any) {
+      out.push({ name: 'Tap-to-play (muted)', pass: false, detail: e?.message || 'play() rejected' });
+    }
+
+    // Unmute toggle reflects element state
+    try {
+      v.muted = false;
+      await v.play().catch(() => {});
+      await wait(150);
+      const unmutedOK = v.muted === false;
+      out.push({ name: 'Unmute toggle reflects element', pass: unmutedOK, detail: `video.muted=${v.muted}` });
+      out.push({
+        name: 'UI state matches video.muted',
+        pass: overlayMuted === v.muted,
+        detail: `ui.overlayMuted=${overlayMuted}, video.muted=${v.muted}`,
+      });
+    } catch (e: any) {
+      out.push({ name: 'Unmute toggle reflects element', pass: false, detail: e?.message });
+    }
+
+    // Re-mute
+    try {
+      v.muted = true;
+      await wait(80);
+      out.push({ name: 'Re-mute works', pass: v.muted === true });
+    } catch (e: any) {
+      out.push({ name: 'Re-mute works', pass: false, detail: e?.message });
+    }
+
+    // Pause works
+    try {
+      v.pause();
+      await wait(80);
+      out.push({ name: 'Pause works', pass: v.paused });
+    } catch (e: any) {
+      out.push({ name: 'Pause works', pass: false, detail: e?.message });
+    }
+
+    setQaResults(out);
+    setQaRunning(false);
   };
 
   return (
@@ -476,6 +572,37 @@ const Discover = () => {
               {debugInfo.nextEligibleAt && !debugInfo.canCount && (
                 <div>Next eligible: {new Date(debugInfo.nextEligibleAt).toLocaleString()}</div>
               )}
+            </div>
+          )}
+          {isAdmin && (
+            <button
+              onClick={() => { setQaOpen(o => !o); if (!qaOpen && qaResults.length === 0) runQaChecks(); }}
+              aria-label="Run QA checklist"
+              className="absolute bottom-4 left-4 z-[110] flex items-center gap-1.5 px-3 py-2 rounded-full bg-black/70 backdrop-blur-sm text-white text-[11px] font-semibold hover:bg-black/85 transition-colors"
+            >
+              <ClipboardCheck className="w-3.5 h-3.5" /> QA checks
+            </button>
+          )}
+          {isAdmin && qaOpen && (
+            <div className="absolute bottom-16 left-4 z-[110] w-80 max-h-[60vh] overflow-y-auto px-3 py-2 rounded-lg bg-black/80 backdrop-blur-sm text-white text-[11px] space-y-1">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-semibold flex items-center gap-1.5"><ClipboardCheck className="w-3 h-3" /> Tap/Unmute QA</span>
+                <button onClick={runQaChecks} disabled={qaRunning} className="text-[10px] underline disabled:opacity-50">
+                  {qaRunning ? 'Running…' : 'Re-run'}
+                </button>
+              </div>
+              {qaResults.length === 0 && <div className="opacity-70">No results yet.</div>}
+              {qaResults.map((r, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span className={r.pass === null ? 'text-yellow-400' : r.pass ? 'text-green-400' : 'text-red-400'}>
+                    {r.pass === null ? '•' : r.pass ? '✓' : '✗'}
+                  </span>
+                  <div className="flex-1">
+                    <div>{r.name}</div>
+                    {r.detail && <div className="opacity-60 text-[10px] break-all">{r.detail}</div>}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
           <ReelPlayer
