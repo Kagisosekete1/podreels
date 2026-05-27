@@ -76,7 +76,12 @@ const Discover = () => {
       }
 
       const { data } = await query;
-      const reelsData = (data || []) as ReelThumb[];
+      let reelsData = (data || []) as ReelThumb[];
+      // E2E / dev escape hatch: tests can seed `window.__E2E_REELS__` so the
+      // Discover grid is never empty regardless of backend data.
+      if (reelsData.length === 0 && typeof window !== 'undefined' && (window as any).__E2E_REELS__) {
+        reelsData = (window as any).__E2E_REELS__ as ReelThumb[];
+      }
       setReels(reelsData);
 
       // Profiles
