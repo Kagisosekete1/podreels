@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Share2, Play, Bookmark, Send, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Play, Bookmark, Send, Trash2, Volume2, VolumeX } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import CommentsSheet from '@/components/CommentsSheet';
 import AdOverlay from '@/components/AdOverlay';
@@ -78,6 +78,10 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
   const [, forceRerender] = useState(0);
   const [showAd, setShowAd] = useState(false);
   const adShownForThisActivation = useRef(false);
+  // On mobile (and especially iOS PWA), autoplay is only allowed when muted.
+  // We start muted, then let the user tap an explicit unmute button — that tap
+  // is a real user gesture, so iOS honors the unmute.
+  const [isMuted, setIsMuted] = useState(true);
 
   // Show an ad after every N reel plays (per session).
   const AD_AFTER_PLAYS = 2;
@@ -152,7 +156,6 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       loopCount.current = 0;
       setShowContinue(false);
       v.currentTime = 0;
-      v.muted = false;
       adShownForThisActivation.current = false;
 
       // Increment session play counter and decide whether to show an ad first.
@@ -169,21 +172,20 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         }
       } catch {}
 
-      // Try unmuted first, then muted fallback
-      const tryPlay = () => {
-        v.play().then(() => {
-          setIsPlaying(true);
-          // Attempt to unmute after interaction
-          v.muted = false;
-        }).catch(() => {
-          v.muted = true;
-          v.play().then(() => {
-            setIsPlaying(true);
-          }).catch(() => {});
-        });
-      };
-      // Play immediately
-      tryPlay();
+      // Mobile-safe autoplay: ALWAYS start muted so iOS Safari / Android PWAs
+      // allow playback without a gesture. The user can unmute via the explicit
+      // volume button (which runs inside a gesture handler).
+      const startMuted = isMobile;
+      v.muted = startMuted;
+      setIsMuted(startMuted);
+      v.play().then(() => {
+        setIsPlaying(true);
+      }).catch(() => {
+        // Last resort: force-mute and retry.
+        v.muted = true;
+        setIsMuted(true);
+        v.play().then(() => setIsPlaying(true)).catch(() => {});
+      });
       if (!viewCounted.current && user) {
         viewCounted.current = true;
         supabase.rpc('increment_view_safe', { reel_uuid: reel.id, viewer_id: user.id });
@@ -201,14 +203,17 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       loopCount.current = 0;
       setShowAd(false);
     }
-  }, [isActive, reel.id, user]);
+  }, [isActive, reel.id, user, isMobile]);
 
   const handleAdClose = useCallback(() => {
     setShowAd(false);
     if (videoRef.current && isActive) {
-      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {
+      const v = videoRef.current;
+      v.muted = isMuted;
+      v.play().then(() => setIsPlaying(true)).catch(() => {
         if (videoRef.current) {
           videoRef.current.muted = true;
+          setIsMuted(true);
           videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
         }
       });
@@ -217,7 +222,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         supabase.rpc('increment_view_safe', { reel_uuid: reel.id, viewer_id: user.id });
       }
     }
-  }, [isActive, reel.id, user]);
+  }, [isActive, reel.id, user, isMuted]);
 
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -228,9 +233,22 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
     } else {
       v.play().then(() => setIsPlaying(true)).catch(() => {
         v.muted = true;
+        setIsMuted(true);
         v.play().then(() => setIsPlaying(true)).catch(() => {});
       });
     }
+  };
+
+  // Mobile-safe unmute: runs synchronously inside the tap gesture so iOS
+  // honors the unmute. Also calls play() in the same gesture frame.
+  const toggleMute = (e?: React.MouseEvent | React.TouchEvent) => {
+    e?.stopPropagation();
+    const v = videoRef.current;
+    if (!v) return;
+    const next = !v.muted;
+    v.muted = next;
+    setIsMuted(next);
+    v.play().then(() => setIsPlaying(true)).catch(() => {});
   };
 
   const handleShare = async () => {
