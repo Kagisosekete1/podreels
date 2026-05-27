@@ -86,4 +86,32 @@ test.describe('Discover overlay — tap to play & mute toggle', () => {
     // After close the dialog is gone — there must be no playing overlay video.
     await expect(page.locator(videoSel)).toHaveCount(0);
   });
+
+  test('shows an ad overlay after every 2nd reel play', async ({ page }) => {
+    // Reset session play counter so we deterministically hit the ad on the 2nd open.
+    await page.addInitScript(() => sessionStorage.removeItem('reels:playCount'));
+    await openFirstReel(page);
+    // Close after first play.
+    await page.getByRole('button', { name: 'Close' }).click();
+    await expect(page.locator('[role="dialog"][aria-label="Reel player"]')).toHaveCount(0);
+
+    // Open the same/next reel — this is the 2nd play and should trigger an ad.
+    await page.locator('.grid button.aspect-\\[9\\/16\\]').first().click();
+    await expect(page.getByRole('dialog', { name: 'Sponsored message' })).toBeVisible({ timeout: 5000 });
+
+    // The reel video must be paused while the ad is up.
+    const pausedDuringAd = await page.locator(videoSel).evaluate((el: HTMLVideoElement) => el.paused);
+    expect(pausedDuringAd).toBe(true);
+
+    // Wait for skip to become available and click it.
+    await page.getByRole('button', { name: /Skip ad/ }).click({ timeout: 10_000 });
+    await expect(page.getByRole('dialog', { name: 'Sponsored message' })).toHaveCount(0);
+
+    // After skipping the ad, the reel video should resume.
+    await page.waitForTimeout(400);
+    const playingAfterAd = await page.locator(videoSel).evaluate(
+      (el: HTMLVideoElement) => !el.paused
+    );
+    expect(playingAfterAd).toBe(true);
+  });
 });
