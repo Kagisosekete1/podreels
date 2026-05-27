@@ -20,13 +20,34 @@ import { test, expect, Page } from '@playwright/test';
 
 const videoSel = '[role="dialog"][aria-label="Reel player"] video';
 
+// A small, reliable public test video so the spec never depends on backend data.
+const MOCK_REEL = {
+  id: '00000000-0000-0000-0000-000000000001',
+  title: 'E2E Mock Reel',
+  thumbnail_url: null,
+  video_url:
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+  views_count: 1,
+  likes_count: 0,
+  category: 'General',
+  hashtags: [],
+  user_id: '00000000-0000-0000-0000-000000000002',
+};
+
+test.beforeEach(async ({ page }) => {
+  // Seed at least one reel into the Discover grid via the app's E2E escape
+  // hatch, so the test never relies on the live backend having data.
+  await page.addInitScript((reel) => {
+    (window as any).__E2E_REELS__ = [reel];
+    sessionStorage.removeItem('reels:playCount');
+  }, MOCK_REEL);
+});
+
 async function openFirstReel(page: Page) {
   await page.goto('/discover');
-  // Wait for the grid to either render reels or show the empty state.
   await page.waitForLoadState('networkidle');
   const tile = page.locator('.grid button.aspect-\\[9\\/16\\]').first();
-  const count = await tile.count();
-  test.skip(count === 0, 'No reels available in this environment to test against.');
+  await expect(tile).toBeVisible();
   await tile.click();
   await expect(page.locator('[role="dialog"][aria-label="Reel player"]')).toBeVisible();
   await expect(page.locator(videoSel)).toBeVisible();
@@ -87,31 +108,66 @@ test.describe('Discover overlay — tap to play & mute toggle', () => {
     await expect(page.locator(videoSel)).toHaveCount(0);
   });
 
-  test('shows an ad overlay after every 2nd reel play', async ({ page }) => {
-    // Reset session play counter so we deterministically hit the ad on the 2nd open.
-    await page.addInitScript(() => sessionStorage.removeItem('reels:playCount'));
+  test('ad overlay is hidden (ads disabled)', async ({ page }) => {
     await openFirstReel(page);
-    // Close after first play.
     await page.getByRole('button', { name: 'Close' }).click();
-    await expect(page.locator('[role="dialog"][aria-label="Reel player"]')).toHaveCount(0);
-
-    // Open the same/next reel — this is the 2nd play and should trigger an ad.
     await page.locator('.grid button.aspect-\\[9\\/16\\]').first().click();
-    await expect(page.getByRole('dialog', { name: 'Sponsored message' })).toBeVisible({ timeout: 5000 });
-
-    // The reel video must be paused while the ad is up.
-    const pausedDuringAd = await page.locator(videoSel).evaluate((el: HTMLVideoElement) => el.paused);
-    expect(pausedDuringAd).toBe(true);
-
-    // Wait for skip to become available and click it.
-    await page.getByRole('button', { name: /Skip ad/ }).click({ timeout: 10_000 });
+    // Ads are intentionally disabled — the sponsored dialog must never appear.
     await expect(page.getByRole('dialog', { name: 'Sponsored message' })).toHaveCount(0);
+  });
+});
 
-    // After skipping the ad, the reel video should resume.
-    await page.waitForTimeout(400);
-    const playingAfterAd = await page.locator(videoSel).evaluate(
-      (el: HTMLVideoElement) => !el.paused
+/**
+ * Mobile-specific checks for iPhone 13 emulation. We assert that:
+ *  - The overlay video autoplays muted (iOS Safari requirement).
+ *  - Tapping the video toggles play/pause without errors.
+ *  - Tapping Unmute inside a real gesture flips video.muted to false and
+ *    the UI button label updates accordingly.
+ */
+test.describe('Discover overlay — iPhone 13 mobile checks', () => {
+  test.skip(({ browserName }, testInfo) => testInfo.project.name !== 'mobile-safari', 'Mobile-only');
+
+  test('autoplays muted, tap toggles play/pause, unmute works on a real tap', async ({ page }) => {
+    await openFirstReel(page);
+
+    // Mobile must start muted so iOS allows autoplay.
+    await page.waitForTimeout(600);
+    const initial = await page.locator(videoSel).evaluate((el: HTMLVideoElement) => ({
+      muted: el.muted,
+      paused: el.paused,
+      readyState: el.readyState,
+    }));
+    expect(initial.muted).toBe(true);
+
+    // Tap to pause.
+    await page.locator(videoSel).tap();
+    await page.waitForTimeout(200);
+    const afterFirstTap = await page.locator(videoSel).evaluate(
+      (el: HTMLVideoElement) => el.paused
     );
-    expect(playingAfterAd).toBe(true);
+    // Tap to play again.
+    await page.locator(videoSel).tap();
+    await page.waitForTimeout(200);
+    const afterSecondTap = await page.locator(videoSel).evaluate(
+      (el: HTMLVideoElement) => el.paused
+    );
+    expect(afterFirstTap).not.toBe(afterSecondTap);
+
+    // Unmute via the explicit gesture button — iOS only honors this inside a tap.
+    await page.getByRole('button', { name: 'Unmute' }).tap();
+    await page.waitForTimeout(300);
+    const afterUnmute = await page.locator(videoSel).evaluate(
+      (el: HTMLVideoElement) => el.muted
+    );
+    expect(afterUnmute).toBe(false);
+    await expect(page.getByRole('button', { name: 'Mute' })).toBeVisible();
+
+    // Re-mute via tap.
+    await page.getByRole('button', { name: 'Mute' }).tap();
+    await page.waitForTimeout(200);
+    const afterReMute = await page.locator(videoSel).evaluate(
+      (el: HTMLVideoElement) => el.muted
+    );
+    expect(afterReMute).toBe(true);
   });
 });

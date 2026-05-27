@@ -85,6 +85,8 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
 
   // Show an ad after every N reel plays (per session).
   const AD_AFTER_PLAYS = 2;
+  // Feature flag — ads are temporarily hidden.
+  const ADS_ENABLED = false;
 
   useEffect(() => {
     setLikesCount(reel.likes_count);
@@ -163,7 +165,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         const key = 'reels:playCount';
         const next = (parseInt(sessionStorage.getItem(key) || '0', 10) || 0) + 1;
         sessionStorage.setItem(key, String(next));
-        if (next > 0 && next % AD_AFTER_PLAYS === 0) {
+        if (ADS_ENABLED && next > 0 && next % AD_AFTER_PLAYS === 0) {
           adShownForThisActivation.current = true;
           setShowAd(true);
           v.pause();
