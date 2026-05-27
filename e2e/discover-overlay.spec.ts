@@ -20,13 +20,34 @@ import { test, expect, Page } from '@playwright/test';
 
 const videoSel = '[role="dialog"][aria-label="Reel player"] video';
 
+// A small, reliable public test video so the spec never depends on backend data.
+const MOCK_REEL = {
+  id: '00000000-0000-0000-0000-000000000001',
+  title: 'E2E Mock Reel',
+  thumbnail_url: null,
+  video_url:
+    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+  views_count: 1,
+  likes_count: 0,
+  category: 'General',
+  hashtags: [],
+  user_id: '00000000-0000-0000-0000-000000000002',
+};
+
+test.beforeEach(async ({ page }) => {
+  // Seed at least one reel into the Discover grid via the app's E2E escape
+  // hatch, so the test never relies on the live backend having data.
+  await page.addInitScript((reel) => {
+    (window as any).__E2E_REELS__ = [reel];
+    sessionStorage.removeItem('reels:playCount');
+  }, MOCK_REEL);
+});
+
 async function openFirstReel(page: Page) {
   await page.goto('/discover');
-  // Wait for the grid to either render reels or show the empty state.
   await page.waitForLoadState('networkidle');
   const tile = page.locator('.grid button.aspect-\\[9\\/16\\]').first();
-  const count = await tile.count();
-  test.skip(count === 0, 'No reels available in this environment to test against.');
+  await expect(tile).toBeVisible();
   await tile.click();
   await expect(page.locator('[role="dialog"][aria-label="Reel player"]')).toBeVisible();
   await expect(page.locator(videoSel)).toBeVisible();
