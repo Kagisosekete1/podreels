@@ -467,6 +467,13 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
 
       {/* Right side actions */}
       <div className="absolute right-2 bottom-28 flex flex-col items-center gap-3.5 z-20">
+        <button
+          onClick={toggleMute}
+          aria-label={isMuted ? 'Unmute' : 'Mute'}
+          className="w-9 h-9 rounded-full bg-black/55 backdrop-blur-sm flex items-center justify-center text-white"
+        >
+          {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+        </button>
         <button onClick={() => navigate(`/profile/${reel.profiles.username}`)} className="mb-1">
           <Avatar className="w-9 h-9 border-[1.5px] border-primary">
             <AvatarImage src={reel.profiles.avatar_url || undefined} className="object-cover" />
