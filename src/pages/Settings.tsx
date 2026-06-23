@@ -573,6 +573,21 @@ const Settings = () => {
             label="Dark Mode"
             trailing={<Switch checked={darkMode} onCheckedChange={toggleDarkMode} />}
           />
+          <MenuItem
+            icon={Palette}
+            label="App Theme"
+            onClick={() => setSubPage('theme')}
+            trailing={
+              <div className="flex items-center gap-2">
+                <div className="flex -space-x-1">
+                  {(themes.find(t => t.id === themeId)?.swatches ?? []).slice(0, 3).map((c, i) => (
+                    <span key={i} className="w-3.5 h-3.5 rounded-full border border-card" style={{ backgroundColor: c }} />
+                  ))}
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </div>
+            }
+          />
           <MenuItem icon={Wifi} label="Video Quality" onClick={() => setSubPage('quality')} />
           <MenuItem icon={Globe} label="Language" onClick={() => setSubPage('language')} />
         </div>
@@ -580,6 +595,7 @@ const Settings = () => {
         <SectionLabel label="Support" />
         <div className="rounded-2xl border border-border bg-card mx-4 overflow-hidden divide-y divide-border">
           <MenuItem icon={HelpCircle} label="Help Center" onClick={() => setSubPage('help')} />
+          <MenuItem icon={MessageCircleQuestion} label="FAQ" onClick={() => setSubPage('faq')} />
           <MenuItem icon={Info} label="About" onClick={() => setSubPage('about')} />
           <MenuItem icon={Shield} label="Terms & Policies" onClick={() => setSubPage('terms')} />
         </div>
