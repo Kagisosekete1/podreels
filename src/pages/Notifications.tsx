@@ -191,7 +191,7 @@ const Notifications = () => {
   const getMessage = (n: Notification) => {
     const name = n.actor_profile?.username || 'Someone';
     switch (n.type) {
-      case 'like': return <><span className="font-semibold">@{name}</span> liked your PodReel</>;
+      case 'like': return <><span className="font-semibold">@{name}</span> liked your Clip</>;
       case 'comment': return <><span className="font-semibold">@{name}</span> commented: {n.content}</>;
       case 'follow': return <><span className="font-semibold">@{name}</span> started following you</>;
       case 'message': return <><span className="font-semibold">@{name}</span> sent you a message</>;

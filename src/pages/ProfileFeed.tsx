@@ -120,7 +120,7 @@ const ProfileFeed = () => {
         <button onClick={() => navigate(`/profile/${username}`)} className="text-primary-foreground/70">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <span className="text-primary-foreground/40 text-sm font-bold">@{username}'s PodReels</span>
+        <span className="text-primary-foreground/40 text-sm font-bold">@{username}'s Clips</span>
       </div>
       <div
         ref={containerRef}

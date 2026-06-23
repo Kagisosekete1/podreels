@@ -7,6 +7,10 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Mic, Headphones, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import Markdown from '@/components/Markdown';
+import { TERMS_OF_USE_MD } from '@/lib/legal';
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -17,6 +21,7 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
   const [userType, setUserType] = useState<'viewer' | 'podcaster'>('viewer');
+  const [termsOpen, setTermsOpen] = useState(false);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +46,7 @@ const Auth = () => {
           },
         });
         if (error) throw error;
-        toast({ title: 'Account created! Welcome to PodReels 🎙️' });
+        toast({ title: 'Account created! Welcome to Clipped 🎙️' });
         navigate('/feed');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -59,7 +64,8 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <h1 className="text-4xl font-black text-gradient">PodReels</h1>
+          <img src="/logo.png" alt="Clipped" className="w-16 h-16 rounded-2xl mx-auto mb-4 shadow-lg" />
+          <h1 className="text-4xl font-black text-gradient">Clipped</h1>
           <p className="mt-2 text-muted-foreground">
             {isSignUp ? 'Create your account' : 'Welcome back'}
           </p>
@@ -101,7 +107,7 @@ const Auth = () => {
                       className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border cursor-pointer peer-data-[state=checked]:border-accent peer-data-[state=checked]:bg-accent/5 transition-all"
                     >
                       <Mic className="w-6 h-6 text-accent" />
-                      <span className="text-sm font-medium">Post PodReels</span>
+                      <span className="text-sm font-medium">Post Clips</span>
                     </label>
                   </div>
                 </RadioGroup>
@@ -143,6 +149,24 @@ const Auth = () => {
           <button onClick={() => setIsSignUp(!isSignUp)} className="text-primary hover:underline font-medium">
             {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </button>
+        </p>
+
+        <p className="text-center text-xs text-muted-foreground px-4">
+          By continuing, you agree to our{' '}
+          <Dialog open={termsOpen} onOpenChange={setTermsOpen}>
+            <DialogTrigger asChild>
+              <button className="text-primary hover:underline font-medium">Terms of Use</button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg p-0 gap-0 max-h-[85vh]">
+              <DialogHeader className="px-5 pt-5 pb-3 border-b border-border">
+                <DialogTitle>Terms of Use</DialogTitle>
+              </DialogHeader>
+              <ScrollArea className="max-h-[70vh] px-5 py-4">
+                <Markdown content={TERMS_OF_USE_MD} />
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
+          .
         </p>
       </div>
     </div>

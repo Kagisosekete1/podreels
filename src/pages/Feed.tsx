@@ -194,9 +194,9 @@ const Feed = () => {
           <div className="w-20 h-20 rounded-full gradient-primary flex items-center justify-center mb-6">
             <span className="text-3xl">🎙️</span>
           </div>
-          <h2 className="text-2xl font-bold mb-2">No PodReels Yet</h2>
+          <h2 className="text-2xl font-bold mb-2">No Clips Yet</h2>
           <p className="text-muted-foreground max-w-sm">
-            Be the first to share a podcast clip! Tap the + button to upload your first PodReel.
+            Be the first to share a podcast clip! Tap the + button to upload your first clip.
           </p>
         </div>
         <BottomNav />
@@ -207,7 +207,7 @@ const Feed = () => {
   return (
     <div className="h-screen flex flex-col bg-background">
       <div className="absolute top-0 left-0 right-0 z-30 px-4 pt-4 pb-2">
-        <span className="text-primary-foreground font-black text-lg drop-shadow-lg" style={{ opacity: 0.4 }}>PodReels</span>
+        <span className="text-primary-foreground font-black text-lg drop-shadow-lg" style={{ opacity: 0.4 }}>Clipped</span>
       </div>
       <div
         ref={containerRef}

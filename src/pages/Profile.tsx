@@ -387,7 +387,7 @@ const Profile = () => {
           <div className="flex-1 flex justify-around text-center">
             <button onClick={() => navigate(`/profile/${profileData.username}`)} className="flex flex-col items-center">
               <p className="text-lg font-bold">{reels.length}</p>
-              <p className="text-xs text-muted-foreground">PodReels</p>
+              <p className="text-xs text-muted-foreground">Clips</p>
             </button>
             <button onClick={fetchFollowers} className="flex flex-col items-center">
               <p className="text-lg font-bold">{profileData.followers_count}</p>
@@ -483,7 +483,7 @@ const Profile = () => {
         </div>
 
         {activeTab === 'tagged' ? (
-          <p className="text-center text-muted-foreground py-12">No tagged PodReels yet</p>
+          <p className="text-center text-muted-foreground py-12">No tagged Clips yet</p>
         ) : (
           <>
             <div className="grid grid-cols-3 gap-0.5 px-0.5">
@@ -506,7 +506,7 @@ const Profile = () => {
             </div>
             {displayReels.length === 0 && (
               <p className="text-center text-muted-foreground py-12">
-                {activeTab === 'saved' ? 'No saved PodReels' : 'No PodReels yet'}
+                {activeTab === 'saved' ? 'No saved Clips' : 'No Clips yet'}
               </p>
             )}
           </>

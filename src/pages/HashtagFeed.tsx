@@ -39,7 +39,7 @@ const HashtagFeed = () => {
         <div className="flex items-center gap-3 h-14 px-4">
           <button onClick={() => navigate(-1)}><ArrowLeft className="w-6 h-6" /></button>
           <h1 className="text-lg font-bold text-blue-500">#{tag}</h1>
-          <span className="text-sm text-muted-foreground">{reels.length} PodReels</span>
+          <span className="text-sm text-muted-foreground">{reels.length} Clips</span>
         </div>
       </header>
 
@@ -62,7 +62,7 @@ const HashtagFeed = () => {
         ))}
       </div>
       {reels.length === 0 && (
-        <p className="text-center text-muted-foreground py-12">No PodReels with #{tag}</p>
+        <p className="text-center text-muted-foreground py-12">No Clips with #{tag}</p>
       )}
 
       <BottomNav />

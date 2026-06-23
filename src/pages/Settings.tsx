@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Lock, Bell, DollarSign, Moon, Sun, Wifi, Globe, HelpCircle, Info, Shield, LogOut, ChevronRight, ChevronLeft, X, Settings as SettingsIcon, Check, Eye, Heart, Users, TrendingUp, BarChart3 } from 'lucide-react';
+import { ArrowLeft, User, Lock, Bell, DollarSign, Moon, Sun, Wifi, Globe, HelpCircle, Info, Shield, LogOut, ChevronRight, ChevronLeft, X, Settings as SettingsIcon, Check, Eye, Heart, Users, TrendingUp, BarChart3, Palette, MessageCircleQuestion } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -11,10 +11,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import BottomNav from '@/components/BottomNav';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import Markdown from '@/components/Markdown';
+import { ABOUT_MD, TERMS_MD, HELP_MD, FAQ_MD } from '@/lib/legal';
+import { useColorTheme } from '@/contexts/ThemeContext';
 
 import { Coffee } from 'lucide-react';
 
-type SubPage = null | 'account' | 'privacy' | 'notifications' | 'earnings' | 'darkmode' | 'quality' | 'language' | 'help' | 'about' | 'terms' | 'faq';
+type SubPage = null | 'account' | 'privacy' | 'notifications' | 'earnings' | 'darkmode' | 'quality' | 'language' | 'help' | 'about' | 'terms' | 'faq' | 'theme';
 
 const CreatorDashboard = ({ onBack, profile, user }: { onBack: () => void; profile: any; user: any }) => {
   const [totalViews, setTotalViews] = useState(0);
@@ -132,7 +135,7 @@ const CreatorDashboard = ({ onBack, profile, user }: { onBack: () => void; profi
           <div className="rounded-2xl border border-border bg-card p-4">
             <div className="flex items-center gap-2 mb-4">
               <BarChart3 className="w-4 h-4 text-primary" />
-              <h3 className="text-sm font-bold text-foreground">Top PodReels Performance</h3>
+              <h3 className="text-sm font-bold text-foreground">Top Clipped Performance</h3>
             </div>
             <div className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -160,7 +163,7 @@ const CreatorDashboard = ({ onBack, profile, user }: { onBack: () => void; profi
 
         {/* How to earn */}
         <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-bold">How to Earn on PodReels</h3>
+          <h3 className="text-sm font-bold">How to Earn on Clipped</h3>
           <div className="space-y-3">
             {[
               { title: 'Coffee Tips', desc: 'Fans can buy you coffee directly', icon: Coffee, status: 'Active' },
@@ -189,6 +192,7 @@ const CreatorDashboard = ({ onBack, profile, user }: { onBack: () => void; profi
 const Settings = () => {
   const navigate = useNavigate();
   const { user, profile, refreshProfile } = useAuth();
+  const { themeId, setThemeId, themes } = useColorTheme();
   const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
   const [subPage, setSubPage] = useState<SubPage>(null);
 
@@ -337,8 +341,8 @@ const Settings = () => {
         </div>
         <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
           <h3 className="text-sm font-bold text-foreground">Data & Privacy</h3>
-          <p className="text-xs text-muted-foreground">Your data is stored securely and never shared with third parties. PodReels uses end-to-end encryption for all personal data.</p>
-          <p className="text-xs text-muted-foreground">You can request a copy of your data or request account deletion by contacting support@podreels.app</p>
+          <p className="text-xs text-muted-foreground">Your data is stored securely and never shared with third parties. Clipped uses end-to-end encryption for all personal data.</p>
+          <p className="text-xs text-muted-foreground">You can request a copy of your data or request account deletion by contacting semogroup65@gmail.com</p>
         </div>
         <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
           <h3 className="text-sm font-bold text-foreground">Security Tips</h3>
@@ -361,8 +365,8 @@ const Settings = () => {
       <div className="max-w-lg mx-auto p-4 space-y-4">
         <div className="rounded-2xl border border-border bg-card overflow-hidden divide-y divide-border">
           {[
-            { label: 'Likes', desc: 'When someone likes your PodReel', value: notifLikes, set: setNotifLikes },
-            { label: 'Comments', desc: 'When someone comments on your PodReel', value: notifComments, set: setNotifComments },
+            { label: 'Likes', desc: 'When someone likes your Clip', value: notifLikes, set: setNotifLikes },
+            { label: 'Comments', desc: 'When someone comments on your Clip', value: notifComments, set: setNotifComments },
             { label: 'New Followers', desc: 'When someone follows you', value: notifFollows, set: setNotifFollows },
             { label: 'New Episodes', desc: 'When podcasters you follow post', value: notifNewEpisodes, set: setNotifNewEpisodes },
           ].map(item => (
@@ -435,34 +439,59 @@ const Settings = () => {
     </div>
   );
 
+  if (subPage === 'theme') return (
+    <div className="min-h-screen bg-background pb-24">
+      <SubPageHeader title="App Theme" />
+      <div className="max-w-lg mx-auto p-4 space-y-4">
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <p className="text-sm text-muted-foreground mb-4">Choose an accent theme. It instantly recolors buttons, highlights, and gradients across the whole app.</p>
+          <div className="grid grid-cols-2 gap-3">
+            {themes.map(t => {
+              const active = themeId === t.id;
+              return (
+                <button
+                  key={t.id}
+                  onClick={() => setThemeId(t.id)}
+                  className={`relative text-left rounded-2xl border-2 p-3 transition-all ${active ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'}`}
+                >
+                  <div className="flex gap-1.5 mb-3">
+                    {t.swatches.map((c, i) => (
+                      <span key={i} className="h-9 flex-1 rounded-lg" style={{ backgroundColor: c }} />
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-foreground">{t.name}</span>
+                    {active && <Check className="w-4 h-4 text-primary" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <p className="text-xs text-center text-muted-foreground">Your theme is saved on this device.</p>
+      </div>
+      <BottomNav />
+    </div>
+  );
+
   if (subPage === 'help') return (
     <div className="min-h-screen bg-background pb-24">
       <SubPageHeader title="Help Center" />
-      <div className="max-w-lg mx-auto p-4 space-y-4">
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-bold text-foreground">Getting Started</h3>
-          <p className="text-xs text-muted-foreground">PodReels lets you discover short podcast clips in a vertical feed — just swipe up to explore. Like, comment, and follow your favourite podcasters.</p>
+      <div className="max-w-lg mx-auto p-4">
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <Markdown content={HELP_MD} />
         </div>
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-bold text-foreground">How to Upload a PodReel</h3>
-          <ul className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
-            <li>Tap the + button in the navigation</li>
-            <li>Select a video (max 2 minutes, max 100MB)</li>
-            <li>Add a title, description, and podcast name</li>
-            <li>Choose a category and tap "Post PodReel"</li>
-          </ul>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-bold text-foreground">Troubleshooting</h3>
-          <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-            <li>Video not playing? Check your internet connection</li>
-            <li>Upload failing? Ensure video is under 100MB and 2 minutes</li>
-            <li>Can't log in? Try resetting your password</li>
-          </ul>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-bold text-foreground">Contact Support</h3>
-          <p className="text-xs text-muted-foreground">Email us at support@podreels.app for any issues or feedback. We typically respond within 24 hours.</p>
+      </div>
+      <BottomNav />
+    </div>
+  );
+
+  if (subPage === 'faq') return (
+    <div className="min-h-screen bg-background pb-24">
+      <SubPageHeader title="FAQ" />
+      <div className="max-w-lg mx-auto p-4">
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <Markdown content={FAQ_MD} />
         </div>
       </div>
       <BottomNav />
@@ -471,26 +500,15 @@ const Settings = () => {
 
   if (subPage === 'about') return (
     <div className="min-h-screen bg-background pb-24">
-      <SubPageHeader title="About PodReels" />
+      <SubPageHeader title="About Clipped" />
       <div className="max-w-lg mx-auto p-4 space-y-4">
         <div className="flex flex-col items-center py-6">
-          <div className="w-16 h-16 rounded-full gradient-primary flex items-center justify-center mb-3 shadow-lg">
-            <span className="text-3xl">🎙️</span>
-          </div>
-          <h2 className="text-xl font-black text-gradient">PodReels</h2>
+          <img src="/logo.png" alt="Clipped" className="w-16 h-16 rounded-2xl mb-3 shadow-lg" />
+          <h2 className="text-xl font-black text-gradient">Clipped</h2>
           <p className="text-xs text-muted-foreground mt-1">Version 1.0.0</p>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-bold text-foreground">What is PodReels?</h3>
-          <p className="text-xs text-muted-foreground">PodReels is a short-form video platform built exclusively for podcast content. Podcasters can share bite-sized clips (up to 2 minutes) of their best moments, making it easy for listeners to discover new podcasts through engaging, swipeable reels.</p>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-bold text-foreground">Our Mission</h3>
-          <p className="text-xs text-muted-foreground">We believe every podcast deserves to be discovered. PodReels bridges the gap between podcasters and new audiences by turning the best podcast moments into shareable, snackable content.</p>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-bold text-foreground">Built With ❤️</h3>
-          <p className="text-xs text-muted-foreground">PodReels is designed and developed with love for the podcast community. © 2025 PodReels. All rights reserved.</p>
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <Markdown content={ABOUT_MD} />
         </div>
       </div>
       <BottomNav />
@@ -500,44 +518,10 @@ const Settings = () => {
   if (subPage === 'terms') return (
     <div className="min-h-screen bg-background pb-24">
       <SubPageHeader title="Terms & Policies" />
-      <div className="max-w-lg mx-auto p-4 space-y-4">
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-bold text-foreground">Terms of Service</h3>
-          <p className="text-xs text-muted-foreground">By using PodReels, you agree to the following terms:</p>
-          <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-            <li>You must be 13 years or older to use PodReels</li>
-            <li>You are responsible for all content you upload</li>
-            <li>Uploaded content must not violate copyright laws</li>
-            <li>PodReels reserves the right to remove content that violates community guidelines</li>
-            <li>Your account may be suspended for repeated violations</li>
-          </ul>
+      <div className="max-w-lg mx-auto p-4">
+        <div className="rounded-2xl border border-border bg-card p-4">
+          <Markdown content={TERMS_MD} />
         </div>
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-bold text-foreground">Privacy Policy</h3>
-          <p className="text-xs text-muted-foreground">Your privacy matters to us:</p>
-          <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-            <li>We collect only necessary data (email, profile info, usage analytics)</li>
-            <li>Your personal data is encrypted and stored securely</li>
-            <li>We never sell your data to third parties</li>
-            <li>You can request data deletion at any time</li>
-            <li>We use cookies for essential functionality only</li>
-          </ul>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-bold text-foreground">Community Guidelines</h3>
-          <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-            <li>Be respectful to other users and creators</li>
-            <li>No hate speech, harassment, or bullying</li>
-            <li>No explicit, violent, or harmful content</li>
-            <li>Only upload content you own or have rights to</li>
-            <li>Report content that violates these guidelines</li>
-          </ul>
-        </div>
-        <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-bold text-foreground">Content Policy</h3>
-          <p className="text-xs text-muted-foreground">PodReels is a platform for podcast content only. All uploaded reels must be podcast-related clips of 2 minutes or less. Non-podcast content may be removed without notice.</p>
-        </div>
-        <p className="text-xs text-center text-muted-foreground">Last updated: January 2025</p>
       </div>
       <BottomNav />
     </div>
@@ -589,6 +573,21 @@ const Settings = () => {
             label="Dark Mode"
             trailing={<Switch checked={darkMode} onCheckedChange={toggleDarkMode} />}
           />
+          <MenuItem
+            icon={Palette}
+            label="App Theme"
+            onClick={() => setSubPage('theme')}
+            trailing={
+              <div className="flex items-center gap-2">
+                <div className="flex -space-x-1">
+                  {(themes.find(t => t.id === themeId)?.swatches ?? []).slice(0, 3).map((c, i) => (
+                    <span key={i} className="w-3.5 h-3.5 rounded-full border border-card" style={{ backgroundColor: c }} />
+                  ))}
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+              </div>
+            }
+          />
           <MenuItem icon={Wifi} label="Video Quality" onClick={() => setSubPage('quality')} />
           <MenuItem icon={Globe} label="Language" onClick={() => setSubPage('language')} />
         </div>
@@ -596,6 +595,7 @@ const Settings = () => {
         <SectionLabel label="Support" />
         <div className="rounded-2xl border border-border bg-card mx-4 overflow-hidden divide-y divide-border">
           <MenuItem icon={HelpCircle} label="Help Center" onClick={() => setSubPage('help')} />
+          <MenuItem icon={MessageCircleQuestion} label="FAQ" onClick={() => setSubPage('faq')} />
           <MenuItem icon={Info} label="About" onClick={() => setSubPage('about')} />
           <MenuItem icon={Shield} label="Terms & Policies" onClick={() => setSubPage('terms')} />
         </div>
@@ -608,7 +608,7 @@ const Settings = () => {
         </div>
 
         <p className="text-center text-xs text-muted-foreground pb-4">
-          PodReels v1.0 · © 2025
+          Clipped v1.0 · © 2026
         </p>
       </div>
 

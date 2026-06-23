@@ -34,7 +34,7 @@ const AdOverlay = ({ onClose, skipAfter = 5 }: AdOverlayProps) => {
           Ad
         </span>
         <div className="mt-6 space-y-2 text-center">
-          <h3 className="text-xl font-bold">Love PodReels?</h3>
+          <h3 className="text-xl font-bold">Love Clipped?</h3>
           <p className="text-sm opacity-90">
             Support your favorite creators — buy them a coffee or follow them to keep
             the reels coming.

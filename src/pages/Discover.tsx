@@ -437,7 +437,7 @@ const Discover = () => {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search PodReels..."
+            placeholder="Search Clips..."
             className="pl-9"
           />
         </div>
@@ -483,7 +483,7 @@ const Discover = () => {
         {reels.length > 0 && (
           <div className="flex items-center gap-2 px-2 py-3">
             <TrendingUp className="w-4 h-4 text-accent" />
-            <span className="text-sm font-semibold">Popular PodReels</span>
+            <span className="text-sm font-semibold">Popular Clips</span>
           </div>
         )}
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-1">
@@ -539,7 +539,7 @@ const Discover = () => {
           })}
         </div>
         {reels.length === 0 && (
-          <p className="text-center text-muted-foreground py-12">No PodReels found</p>
+          <p className="text-center text-muted-foreground py-12">No Clips found</p>
         )}
       </div>
 

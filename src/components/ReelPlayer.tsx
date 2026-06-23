@@ -275,9 +275,9 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
 
   const handleDelete = async () => {
     if (!user || user.id !== reel.user_id) return;
-    if (!confirm('Delete this PodReel?')) return;
+    if (!confirm('Delete this Clip?')) return;
     await supabase.from('reels').delete().eq('id', reel.id);
-    toast.success('PodReel deleted');
+    toast.success('Clip deleted');
     navigate('/feed');
   };
 
