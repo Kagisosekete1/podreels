@@ -139,7 +139,7 @@ const Upload = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="min-h-screen bg-background pb-28">
       <header className="sticky top-0 z-40 bg-background/85 backdrop-blur-xl border-b border-border/60">
         <div className="flex items-center justify-between h-14 px-4 max-w-lg mx-auto">
           <button onClick={() => navigate(-1)} className="w-9 h-9 -ml-1 rounded-full flex items-center justify-center hover:bg-muted transition-colors">
@@ -243,20 +243,15 @@ const Upload = () => {
             <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Comedy, Tech, True Crime..." maxLength={30} className="rounded-xl" />
           </div>
         </div>
-      </div>
 
-      {/* Sticky post bar */}
-      <div className="fixed bottom-[88px] left-0 right-0 z-40 px-4">
-        <div className="max-w-lg mx-auto">
-          <Button
-            onClick={handleUpload}
-            disabled={uploading || !file || !title.trim()}
-            className="w-full h-12 rounded-2xl gradient-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
-          >
-            {uploading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <UploadIcon className="w-5 h-5 mr-2" />}
-            {uploading ? 'Uploading...' : 'Post Clip'}
-          </Button>
-        </div>
+        <Button
+          onClick={handleUpload}
+          disabled={uploading || !file || !title.trim()}
+          className="w-full h-12 rounded-2xl gradient-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
+        >
+          {uploading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <UploadIcon className="w-5 h-5 mr-2" />}
+          {uploading ? 'Uploading...' : 'Post Clip'}
+        </Button>
       </div>
 
       <BottomNav />
