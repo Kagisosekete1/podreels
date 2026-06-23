@@ -88,7 +88,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Left Sidebar */}
       <aside className="fixed left-0 top-0 bottom-0 w-[220px] xl:w-[245px] border-r border-border bg-background z-50 flex flex-col py-6 px-3">
         <button onClick={() => navigate('/feed')} className="px-3 mb-8 flex items-center gap-2">
-          <img src="/logo.png" alt="Clipped" className="w-7 h-7" />
+          <img src="/logo.png" alt="Clipped" className="w-7 h-7 rounded-lg" />
           <h1 className="text-xl font-black text-gradient">Clipped</h1>
         </button>
 

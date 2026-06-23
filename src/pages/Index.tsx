@@ -22,7 +22,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background">
-      <img src="/logo.png" alt="Clipped" className="w-28 h-28 mb-6 animate-pulse" />
+      <img src="/logo.png" alt="Clipped" className="w-24 h-24 rounded-3xl mb-6 shadow-xl animate-pulse" />
       <h1 className="text-4xl font-black text-gradient mb-2">Clipped</h1>
       <p className="text-muted-foreground text-sm">Short podcast clips. Endless discovery.</p>
       <Loader2 className="w-5 h-5 animate-spin text-primary mt-6" />
