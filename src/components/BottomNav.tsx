@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Search, User, Bell } from 'lucide-react';
+import { Home, Compass, User, Bell, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
@@ -37,55 +37,62 @@ const BottomNav = () => {
   if (!isMobile) return null;
 
   const items = [
-    { icon: Home, label: 'PodReels', path: '/feed' },
-    { icon: Search, label: 'Discover', path: '/discover' },
+    { icon: Home, label: 'Clipped', path: '/feed' },
+    { icon: Compass, label: 'Discover', path: '/discover' },
     { icon: null, label: '', path: '/upload', special: true },
     { icon: Bell, label: 'Alerts', path: '/notifications' },
     { icon: User, label: 'Profile', path: profile ? `/profile/${profile.username}` : '/auth' },
   ];
 
   return (
-    <div className="fixed bottom-3 left-3 right-3 z-50">
-      <nav className="flex items-center justify-around py-2 bg-background/85 backdrop-blur-2xl border border-border/40 rounded-[20px] shadow-lg">
-        {items.map((item) => {
-          const isActive = location.pathname === item.path || (item.path === '/feed' && location.pathname === '/');
-          if (item.special) {
+    <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
+      <div className="h-6 bg-gradient-to-t from-background/80 to-transparent" />
+      <div className="px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pointer-events-auto">
+        <nav className="relative flex items-stretch justify-between px-2.5 h-[62px] bg-card/80 backdrop-blur-2xl border border-border/50 rounded-[26px] shadow-[0_8px_30px_-8px_hsl(var(--foreground)/0.25)]">
+          {items.map((item) => {
+            const isActive = location.pathname === item.path || (item.path === '/feed' && location.pathname === '/');
+            if (item.special) {
+              return (
+                <button
+                  key="upload"
+                  onClick={() => navigate(item.path)}
+                  aria-label="Upload"
+                  className="relative flex items-center justify-center px-1 active:scale-90 transition-transform"
+                >
+                  <div className="w-12 h-12 rounded-2xl gradient-primary flex items-center justify-center shadow-lg shadow-primary/30 ring-1 ring-white/15">
+                    <Plus className="w-6 h-6 text-primary-foreground" strokeWidth={2.6} />
+                  </div>
+                </button>
+              );
+            }
             return (
               <button
-                key="upload"
+                key={item.label}
                 onClick={() => navigate(item.path)}
-                className="relative -mt-6"
+                aria-label={item.label}
+                className="group flex flex-1 flex-col items-center justify-center gap-1 relative active:scale-95 transition-transform"
               >
-                <div className="w-14 h-14 rounded-full gradient-primary flex items-center justify-center shadow-lg shadow-primary/25 border-[3px] border-background">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 5v14M5 12h14" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-                  </svg>
+                <div className="relative flex items-center justify-center">
+                  {item.icon && (
+                    <item.icon
+                      className={`w-[23px] h-[23px] transition-all duration-200 ${isActive ? 'text-primary -translate-y-0.5' : 'text-muted-foreground group-hover:text-foreground'}`}
+                      strokeWidth={isActive ? 2.6 : 1.9}
+                    />
+                  )}
+                  {item.label === 'Alerts' && unreadCount > 0 && (
+                    <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground flex items-center justify-center ring-2 ring-card">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
                 </div>
+                <span className={`text-[10px] leading-none tracking-tight transition-colors ${isActive ? 'text-primary font-bold' : 'text-muted-foreground font-medium'}`}>
+                  {item.label}
+                </span>
               </button>
             );
-          }
-          return (
-            <button
-              key={item.label}
-              onClick={() => navigate(item.path)}
-              className="flex flex-col items-center gap-0.5 py-1 relative min-w-[48px]"
-            >
-              <div className="relative">
-                {item.icon && <item.icon className={`w-[22px] h-[22px] transition-colors ${isActive ? 'text-primary' : 'text-muted-foreground'}`} strokeWidth={isActive ? 2.5 : 1.8} />}
-                {item.label === 'Alerts' && unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-[9px] font-bold text-white flex items-center justify-center">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </div>
-              <span className={`text-[10px] leading-none transition-colors ${isActive ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
-                {item.label}
-              </span>
-              {isActive && <div className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary" />}
-            </button>
-          );
-        })}
-      </nav>
+          })}
+        </nav>
+      </div>
     </div>
   );
 };

@@ -41,7 +41,7 @@ const Auth = () => {
           },
         });
         if (error) throw error;
-        toast({ title: 'Account created! Welcome to PodReels 🎙️' });
+        toast({ title: 'Account created! Welcome to Clipped 🎙️' });
         navigate('/feed');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -59,7 +59,7 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <h1 className="text-4xl font-black text-gradient">PodReels</h1>
+          <h1 className="text-4xl font-black text-gradient">Clipped</h1>
           <p className="mt-2 text-muted-foreground">
             {isSignUp ? 'Create your account' : 'Welcome back'}
           </p>
@@ -101,7 +101,7 @@ const Auth = () => {
                       className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-border cursor-pointer peer-data-[state=checked]:border-accent peer-data-[state=checked]:bg-accent/5 transition-all"
                     >
                       <Mic className="w-6 h-6 text-accent" />
-                      <span className="text-sm font-medium">Post PodReels</span>
+                      <span className="text-sm font-medium">Post Clips</span>
                     </label>
                   </div>
                 </RadioGroup>
