@@ -241,7 +241,6 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       });
     }
   };
-  };
 
   const handleShare = async () => {
     try {
