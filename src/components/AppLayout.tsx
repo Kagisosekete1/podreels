@@ -13,6 +13,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [trendingTags, setTrendingTags] = useState<{ tag: string; count: number }[]>([]);
   const [showMore, setShowMore] = useState(false);
+  const [showAllTrends, setShowAllTrends] = useState(false);
 
   // Redirect unauthenticated users
   useEffect(() => {
@@ -170,8 +171,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             <h2 className="font-bold text-base">Trending</h2>
           </div>
           {trendingTags.length > 0 ? (
+            <>
             <div className="space-y-1">
-              {trendingTags.map(({ tag, count }, i) => (
+              {(showAllTrends ? trendingTags : trendingTags.slice(0, 5)).map(({ tag, count }, i) => (
                 <button
                   key={tag}
                   onClick={() => navigate(`/hashtag/${tag}`)}
@@ -188,6 +190,15 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 </button>
               ))}
             </div>
+            {trendingTags.length > 5 && (
+              <button
+                onClick={() => setShowAllTrends(v => !v)}
+                className="mt-2 ml-3 text-xs font-semibold text-primary"
+              >
+                {showAllTrends ? 'See less' : 'See more'}
+              </button>
+            )}
+            </>
           ) : (
             <p className="text-sm text-muted-foreground px-3">No trends yet</p>
           )}
