@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
-import { Search, TrendingUp, Hash, Eye, Play, Pause, X, Volume2, VolumeX, Bug, ClipboardCheck } from 'lucide-react';
+import { Search, TrendingUp, Hash, Eye, Play, Pause, X, Bug, ClipboardCheck } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import ReelPlayer from '@/components/ReelPlayer';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,6 +48,7 @@ const Discover = () => {
   const [qaOpen, setQaOpen] = useState(false);
   const [qaResults, setQaResults] = useState<{ name: string; pass: boolean | null; detail?: string }[]>([]);
   const [qaRunning, setQaRunning] = useState(false);
+  const [showAllTrends, setShowAllTrends] = useState(false);
 
   // Check admin role
   useEffect(() => {
@@ -333,19 +334,6 @@ const Discover = () => {
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [openReel, restoredWithoutAutoplay]);
 
-  // Toggle overlay mute synchronously inside the user gesture (iOS requirement).
-  const toggleOverlayMute = () => {
-    const v = overlayRef.current?.querySelector('video') as HTMLVideoElement | null;
-    const next = !overlayMuted;
-    if (v) {
-      v.muted = next;
-      // Calling play() in the same gesture is what allows iOS to honor unmute.
-      v.play().catch(() => {});
-    }
-    setOverlayMuted(next);
-    if (restoredWithoutAutoplay) setRestoredWithoutAutoplay(false);
-  };
-
   const closeOverlay = () => {
     // Ensure overlay video is fully stopped so nothing keeps playing in the background.
     const v = overlayRef.current?.querySelector('video') as HTMLVideoElement | null;
@@ -466,7 +454,7 @@ const Discover = () => {
             <span className="text-sm font-semibold">Trending Hashtags</span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {trendingHashtags.map(({ tag, count }) => (
+            {(showAllTrends ? trendingHashtags : trendingHashtags.slice(0, 5)).map(({ tag, count }) => (
               <button
                 key={tag}
                 onClick={() => navigate(`/hashtag/${tag}`)}
@@ -476,6 +464,14 @@ const Discover = () => {
               </button>
             ))}
           </div>
+          {trendingHashtags.length > 5 && (
+            <button
+              onClick={() => setShowAllTrends(v => !v)}
+              className="mt-2 text-xs font-semibold text-primary"
+            >
+              {showAllTrends ? 'See less' : 'See more'}
+            </button>
+          )}
         </div>
       )}
 
@@ -559,13 +555,6 @@ const Discover = () => {
             className="absolute top-4 right-4 z-[110] w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/80 transition-colors"
           >
             <X className="w-5 h-5" />
-          </button>
-          <button
-            onClick={toggleOverlayMute}
-            aria-label={overlayMuted ? 'Unmute' : 'Mute'}
-            className="absolute top-4 right-16 z-[110] w-10 h-10 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/80 transition-colors"
-          >
-            {overlayMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
           </button>
           {isAdmin && debugInfo && (
             <div className="absolute top-4 left-4 z-[110] max-w-xs px-3 py-2 rounded-lg bg-black/70 backdrop-blur-sm text-white text-[11px] space-y-0.5">

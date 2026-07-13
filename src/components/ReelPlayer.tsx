@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Share2, Play, Bookmark, Send, Trash2, Volume2, VolumeX } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Play, Bookmark, Send, Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import CommentsSheet from '@/components/CommentsSheet';
 import AdOverlay from '@/components/AdOverlay';
@@ -174,16 +174,14 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         }
       } catch {}
 
-      // Mobile-safe autoplay: ALWAYS start muted so iOS Safari / Android PWAs
-      // allow playback without a gesture. The user can unmute via the explicit
-      // volume button (which runs inside a gesture handler).
-      const startMuted = isMobile;
-      v.muted = startMuted;
-      setIsMuted(startMuted);
+      // Always try to play with sound on.
+      v.muted = false;
+      setIsMuted(false);
       v.play().then(() => {
         setIsPlaying(true);
       }).catch(() => {
-        // Last resort: force-mute and retry.
+        // Autoplay-with-sound blocked (e.g. iOS): fall back to muted so the
+        // clip still plays; the next user tap will turn the sound on.
         v.muted = true;
         setIsMuted(true);
         v.play().then(() => setIsPlaying(true)).catch(() => {});
@@ -233,24 +231,15 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       v.pause();
       setIsPlaying(false);
     } else {
+      // User gesture — always turn sound on when resuming playback.
+      v.muted = false;
+      setIsMuted(false);
       v.play().then(() => setIsPlaying(true)).catch(() => {
         v.muted = true;
         setIsMuted(true);
         v.play().then(() => setIsPlaying(true)).catch(() => {});
       });
     }
-  };
-
-  // Mobile-safe unmute: runs synchronously inside the tap gesture so iOS
-  // honors the unmute. Also calls play() in the same gesture frame.
-  const toggleMute = (e?: React.MouseEvent | React.TouchEvent) => {
-    e?.stopPropagation();
-    const v = videoRef.current;
-    if (!v) return;
-    const next = !v.muted;
-    v.muted = next;
-    setIsMuted(next);
-    v.play().then(() => setIsPlaying(true)).catch(() => {});
   };
 
   const handleShare = async () => {
@@ -440,7 +429,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       <video
         ref={videoRef}
         src={reel.video_url}
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-full object-contain bg-black"
         loop={false}
         playsInline
         onClick={togglePlay}
@@ -469,13 +458,6 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
 
       {/* Right side actions */}
       <div className="absolute right-2 bottom-28 flex flex-col items-center gap-3.5 z-20">
-        <button
-          onClick={toggleMute}
-          aria-label={isMuted ? 'Unmute' : 'Mute'}
-          className="w-9 h-9 rounded-full bg-black/55 backdrop-blur-sm flex items-center justify-center text-white"
-        >
-          {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-        </button>
         <button onClick={() => navigate(`/profile/${reel.profiles.username}`)} className="mb-1">
           <Avatar className="w-9 h-9 border-[1.5px] border-primary">
             <AvatarImage src={reel.profiles.avatar_url || undefined} className="object-cover" />

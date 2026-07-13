@@ -13,6 +13,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [trendingTags, setTrendingTags] = useState<{ tag: string; count: number }[]>([]);
   const [showMore, setShowMore] = useState(false);
+  const [showAllTrends, setShowAllTrends] = useState(false);
 
   // Redirect unauthenticated users
   useEffect(() => {
@@ -66,7 +67,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   const navItems = [
-    { icon: Home, label: 'Clipped', path: '/feed' },
+    { icon: Home, label: 'Clpped', path: '/feed' },
     { icon: Search, label: 'Discover', path: '/discover' },
     { icon: PlusCircle, label: 'Upload', path: '/upload' },
     { icon: Bell, label: 'Notifications', path: '/notifications', badge: unreadCount },
@@ -88,8 +89,8 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
       {/* Left Sidebar */}
       <aside className="fixed left-0 top-0 bottom-0 w-[220px] xl:w-[245px] border-r border-border bg-background z-50 flex flex-col py-6 px-3">
         <button onClick={() => navigate('/feed')} className="px-3 mb-8 flex items-center gap-2">
-          <img src="/logo.png" alt="Clipped" className="w-7 h-7 rounded-lg" />
-          <h1 className="text-xl font-black text-gradient">Clipped</h1>
+          <img src="/logo.png" alt="Clpped" className="w-7 h-7 rounded-lg" />
+          <h1 className="text-xl font-black text-gradient">Clpped</h1>
         </button>
 
         <nav className="flex-1 flex flex-col gap-1">
@@ -153,7 +154,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             </>
           )}
 
-          <p className="px-3 pt-2 text-[10px] text-muted-foreground">© 2026 Clipped</p>
+          <p className="px-3 pt-2 text-[10px] text-muted-foreground">© 2026 Clpped</p>
         </div>
       </aside>
 
@@ -170,8 +171,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             <h2 className="font-bold text-base">Trending</h2>
           </div>
           {trendingTags.length > 0 ? (
+            <>
             <div className="space-y-1">
-              {trendingTags.map(({ tag, count }, i) => (
+              {(showAllTrends ? trendingTags : trendingTags.slice(0, 5)).map(({ tag, count }, i) => (
                 <button
                   key={tag}
                   onClick={() => navigate(`/hashtag/${tag}`)}
@@ -188,6 +190,15 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
                 </button>
               ))}
             </div>
+            {trendingTags.length > 5 && (
+              <button
+                onClick={() => setShowAllTrends(v => !v)}
+                className="mt-2 ml-3 text-xs font-semibold text-primary"
+              >
+                {showAllTrends ? 'See less' : 'See more'}
+              </button>
+            )}
+            </>
           ) : (
             <p className="text-sm text-muted-foreground px-3">No trends yet</p>
           )}

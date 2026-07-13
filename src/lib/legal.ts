@@ -1,19 +1,19 @@
-// Long-form legal & informational content for Clipped.
+// Long-form legal & informational content for Clpped.
 // Rendered with the lightweight <Markdown /> component.
 
-export const ABOUT_MD = String.raw`# Clipped
+export const ABOUT_MD = String.raw`# Clpped
 
 **Version 1.0.0**
 
-## About Clipped
+## About Clpped
 
-Welcome to **Clipped**, the ultimate short-form video platform created exclusively for podcast creators and listeners. Clipped transforms long podcast episodes into engaging, bite-sized video clips, making podcast discovery faster, easier, and more entertaining than ever before.
+Welcome to **Clpped**, the ultimate short-form video platform created exclusively for podcast creators and listeners. Clpped transforms long podcast episodes into engaging, bite-sized video clips, making podcast discovery faster, easier, and more entertaining than ever before.
 
-In today's fast-paced digital world, discovering new podcasts can be overwhelming. Clipped solves this problem by allowing podcasters to showcase their most interesting, inspiring, educational, and entertaining moments through short video reels of up to 2 minutes. Whether you're a content creator looking to grow your audience or a listener searching for your next favorite podcast, Clipped provides a seamless and enjoyable experience.
+In today's fast-paced digital world, discovering new podcasts can be overwhelming. Clpped solves this problem by allowing podcasters to showcase their most interesting, inspiring, educational, and entertaining moments through short video reels of up to 2 minutes. Whether you're a content creator looking to grow your audience or a listener searching for your next favorite podcast, Clpped provides a seamless and enjoyable experience.
 
 ### Discover Podcasts Differently
 
-Clipped offers an intuitive, swipeable feed where users can browse endless podcast highlights from creators around the world. Instead of committing to a full episode, listeners can quickly explore engaging snippets and decide whether they want to dive deeper into the full podcast.
+Clpped offers an intuitive, swipeable feed where users can browse endless podcast highlights from creators around the world. Instead of committing to a full episode, listeners can quickly explore engaging snippets and decide whether they want to dive deeper into the full podcast.
 
 ### Features
 
@@ -27,13 +27,13 @@ Clipped offers an intuitive, swipeable feed where users can browse endless podca
 
 ### Our Mission
 
-At Clipped, we believe every podcast deserves to be discovered. Many amazing podcasts struggle to reach new audiences despite creating valuable content. Our mission is to bridge the gap between podcasters and listeners by turning the best podcast moments into shareable, snackable content that can be enjoyed anywhere, anytime.
+At Clpped, we believe every podcast deserves to be discovered. Many amazing podcasts struggle to reach new audiences despite creating valuable content. Our mission is to bridge the gap between podcasters and listeners by turning the best podcast moments into shareable, snackable content that can be enjoyed anywhere, anytime.
 
 We are dedicated to helping creators grow their communities while giving listeners an exciting new way to discover content that matches their interests.
 
 ### Our Vision
 
-We envision a world where podcast discovery is as simple and engaging as watching short-form videos. By combining the power of podcasts with the popularity of reels, Clipped creates a platform where meaningful conversations can reach wider audiences and inspire more people.
+We envision a world where podcast discovery is as simple and engaging as watching short-form videos. By combining the power of podcasts with the popularity of reels, Clpped creates a platform where meaningful conversations can reach wider audiences and inspire more people.
 
 ### Company Information
 
@@ -48,23 +48,23 @@ Sandton, Johannesburg, Gauteng, South Africa
 
 ### Built With ❤️
 
-Clipped is proudly designed and developed with passion for the global podcast community. We continuously work to improve the platform, introduce new features, and provide the best possible experience for creators and listeners alike.
+Clpped is proudly designed and developed with passion for the global podcast community. We continuously work to improve the platform, introduce new features, and provide the best possible experience for creators and listeners alike.
 
-Thank you for being part of the Clipped journey.
+Thank you for being part of the Clpped journey.
 
 © 2025 Se-Mo Group Tech. All Rights Reserved.`;
 
-export const TERMS_MD = String.raw`# Clipped Terms of Service, Privacy Policy, Community Guidelines & Content Policy
+export const TERMS_MD = String.raw`# Clpped Terms of Service, Privacy Policy, Community Guidelines & Content Policy
 
 **Last Updated: June 2026**
 
 ## Terms of Service
 
-Welcome to Clipped. By downloading, accessing, or using the Clipped application and services, you agree to comply with and be bound by these Terms of Service. If you do not agree with any part of these terms, you must discontinue use of the platform immediately.
+Welcome to Clpped. By downloading, accessing, or using the Clpped application and services, you agree to comply with and be bound by these Terms of Service. If you do not agree with any part of these terms, you must discontinue use of the platform immediately.
 
 ### 1. Eligibility
 
-To use Clipped, you must:
+To use Clpped, you must:
 
 • Be at least 13 years of age or meet the minimum digital consent age required in your country.
 • Provide accurate and complete account information.
@@ -81,17 +81,17 @@ Users are responsible for:
 • Updating account information when necessary.
 • Immediately reporting unauthorized account access.
 
-Clipped reserves the right to suspend, restrict, or terminate accounts that violate these terms.
+Clpped reserves the right to suspend, restrict, or terminate accounts that violate these terms.
 
 ### 3. User Content
 
-By uploading content to Clipped, you confirm that:
+By uploading content to Clpped, you confirm that:
 
 • You own the content or possess all necessary rights and permissions.
 • Your content does not infringe copyrights, trademarks, privacy rights, or other intellectual property rights.
 • Your content complies with all applicable laws and regulations.
 
-You retain ownership of your content while granting Clipped a non-exclusive, worldwide, royalty-free license to host, display, distribute, promote, and make available your content through the platform.
+You retain ownership of your content while granting Clpped a non-exclusive, worldwide, royalty-free license to host, display, distribute, promote, and make available your content through the platform.
 
 ### 4. Prohibited Activities
 
@@ -107,11 +107,11 @@ Users may not:
 
 ### 5. Intellectual Property
 
-All Clipped branding, logos, software, designs, and platform features remain the property of Se-Mo Group Tech and are protected by applicable intellectual property laws.
+All Clpped branding, logos, software, designs, and platform features remain the property of Se-Mo Group Tech and are protected by applicable intellectual property laws.
 
 ### 6. Content Removal
 
-Clipped reserves the right to remove content without notice if it:
+Clpped reserves the right to remove content without notice if it:
 
 • Violates these terms.
 • Breaches community guidelines.
@@ -129,17 +129,17 @@ Repeated violations may result in:
 
 ### 8. Limitation of Liability
 
-Clipped is provided "as is" and "as available." We do not guarantee uninterrupted service and shall not be liable for indirect, incidental, or consequential damages arising from the use of the platform.
+Clpped is provided "as is" and "as available." We do not guarantee uninterrupted service and shall not be liable for indirect, incidental, or consequential damages arising from the use of the platform.
 
 ### 9. Changes to Terms
 
-We may modify these Terms of Service at any time. Continued use of Clipped after updates constitutes acceptance of the revised terms.
+We may modify these Terms of Service at any time. Continued use of Clpped after updates constitutes acceptance of the revised terms.
 
 ---
 
 # Privacy Policy
 
-At Clipped, protecting your privacy is one of our highest priorities.
+At Clpped, protecting your privacy is one of our highest priorities.
 
 ## Information We Collect
 
@@ -214,7 +214,7 @@ Requests can be submitted via email.
 
 ## Cookies and Analytics
 
-Clipped uses cookies, analytics, and similar technologies solely for:
+Clpped uses cookies, analytics, and similar technologies solely for:
 
 • Authentication
 • Security
@@ -225,7 +225,7 @@ Clipped uses cookies, analytics, and similar technologies solely for:
 
 # Community Guidelines
 
-Clipped exists to create a positive environment for podcasters and listeners.
+Clpped exists to create a positive environment for podcasters and listeners.
 
 ### Respect Others
 
@@ -271,7 +271,7 @@ Users are encouraged to report content or accounts that violate these guidelines
 
 # Content Policy
 
-Clipped is specifically designed for podcast discovery and promotion.
+Clpped is specifically designed for podcast discovery and promotion.
 
 ### Allowed Content
 
@@ -309,7 +309,7 @@ The following content may be removed immediately:
 
 ### Copyright Complaints
 
-Clipped respects intellectual property rights.
+Clpped respects intellectual property rights.
 
 Copyright owners may submit takedown requests with sufficient proof of ownership. Repeated copyright violations may result in permanent account termination.
 
@@ -329,30 +329,30 @@ For support, privacy requests, copyright notices, or legal inquiries, please con
 
 © 2026 Se-Mo Group Tech. All Rights Reserved.`;
 
-export const HELP_MD = String.raw`# Clipped Help & Support
+export const HELP_MD = String.raw`# Clpped Help & Support
 
-## Welcome to Clipped
+## Welcome to Clpped
 
-Thank you for being part of the Clipped community. Whether you're a podcast creator sharing your best moments or a listener discovering new voices, we're here to help you get the most out of your experience.
+Thank you for being part of the Clpped community. Whether you're a podcast creator sharing your best moments or a listener discovering new voices, we're here to help you get the most out of your experience.
 
-This guide covers the basics of using Clipped, uploading content, managing your account, and resolving common issues.
+This guide covers the basics of using Clpped, uploading content, managing your account, and resolving common issues.
 
 ---
 
 # Getting Started
 
-Clipped is a short-form video platform designed exclusively for podcast content. Users can watch, discover, and share podcast highlights through an engaging vertical video feed.
+Clpped is a short-form video platform designed exclusively for podcast content. Users can watch, discover, and share podcast highlights through an engaging vertical video feed.
 
 ### Discover New Podcasts
 
 Getting started is easy:
 
-• Open the Clipped app and sign in or create an account.
+• Open the Clpped app and sign in or create an account.
 • Browse the vertical feed by swiping up and down.
 • Like your favorite clips.
 • Comment on content you enjoy.
 • Follow podcasters to stay updated with their latest uploads.
-• Share Clipped with friends and social media platforms.
+• Share Clpped with friends and social media platforms.
 
 Our recommendation system helps surface podcast content that matches your interests and viewing habits.
 
@@ -362,14 +362,14 @@ Our recommendation system helps surface podcast content that matches your intere
 
 To create an account:
 
-1. Open the Clipped app.
+1. Open the Clpped app.
 2. Select "Sign Up."
 3. Enter your email address and create a secure password.
 4. Choose a username.
 5. Complete your profile information.
 6. Verify your email address if required.
 
-Once registered, you can start watching, interacting with content, and uploading Clipped.
+Once registered, you can start watching, interacting with content, and uploading Clpped.
 
 ---
 
@@ -410,14 +410,14 @@ You can personalize your profile by:
 • Editing your bio.
 • Changing your username (subject to availability).
 • Managing privacy settings.
-• Viewing your uploaded Clipped.
+• Viewing your uploaded Clpped.
 • Tracking engagement on your content.
 
 ---
 
 # Interacting With Content
 
-Clipped allows you to engage with creators through:
+Clpped allows you to engage with creators through:
 
 ### Likes
 
@@ -429,7 +429,7 @@ Join conversations and provide feedback on podcast clips.
 
 ### Following
 
-Follow your favorite creators to receive updates when new Clipped are posted.
+Follow your favorite creators to receive updates when new Clpped are posted.
 
 ### Sharing
 
@@ -446,7 +446,7 @@ If videos are not loading or playing:
 • Check your internet connection.
 • Switch between Wi-Fi and mobile data.
 • Close and reopen the application.
-• Update Clipped to the latest version.
+• Update Clpped to the latest version.
 • Restart your device.
 
 ---
@@ -518,21 +518,21 @@ Our moderation team reviews reports as quickly as possible.
 
 # Frequently Asked Questions
 
-### Is Clipped free to use?
+### Is Clpped free to use?
 
-Yes. Clipped is free to download and use.
+Yes. Clpped is free to download and use.
 
 ### Can I upload full podcast episodes?
 
-No. Clipped is designed for short-form podcast clips only. Uploads must not exceed 2 minutes.
+No. Clpped is designed for short-form podcast clips only. Uploads must not exceed 2 minutes.
 
 ### Who owns my uploaded content?
 
-You retain ownership of your content. However, by uploading content, you grant Clipped permission to host, display, and distribute it within the platform.
+You retain ownership of your content. However, by uploading content, you grant Clpped permission to host, display, and distribute it within the platform.
 
 ### Can I delete my content?
 
-Yes. Users can remove their uploaded Clipped at any time through their account settings.
+Yes. Users can remove their uploaded Clpped at any time through their account settings.
 
 ### How do I delete my account?
 
@@ -552,7 +552,7 @@ If you need assistance, have questions, or would like to report an issue, please
 
 **Response Time:** We typically respond within 24–48 business hours.
 
-We appreciate your feedback and are committed to continuously improving the Clipped experience for creators and listeners worldwide.
+We appreciate your feedback and are committed to continuously improving the Clpped experience for creators and listeners worldwide.
 
 ---
 
@@ -560,29 +560,29 @@ We appreciate your feedback and are committed to continuously improving the Clip
 
 export const FAQ_MD = String.raw`# Frequently Asked Questions (FAQ)
 
-## Clipped FAQ
+## Clpped FAQ
 
-Welcome to the Clipped Frequently Asked Questions section. Here you'll find answers to the most common questions about using the platform.
+Welcome to the Clpped Frequently Asked Questions section. Here you'll find answers to the most common questions about using the platform.
 
 ---
 
 # General Questions
 
-### What is Clipped?
+### What is Clpped?
 
-Clipped is a short-form video platform designed exclusively for podcast content. It allows podcast creators to share highlights and memorable moments through engaging video reels of up to 2 minutes, helping listeners discover new podcasts quickly and easily.
+Clpped is a short-form video platform designed exclusively for podcast content. It allows podcast creators to share highlights and memorable moments through engaging video reels of up to 2 minutes, helping listeners discover new podcasts quickly and easily.
 
-### Is Clipped free to use?
+### Is Clpped free to use?
 
-Yes. Clipped is completely free to download, create an account, watch content, and upload podcast clips.
+Yes. Clpped is completely free to download, create an account, watch content, and upload podcast clips.
 
-### Who can use Clipped?
+### Who can use Clpped?
 
-Anyone aged 13 years or older can use Clipped, subject to local laws and regulations.
+Anyone aged 13 years or older can use Clpped, subject to local laws and regulations.
 
-### Where is Clipped available?
+### Where is Clpped available?
 
-Clipped is available on supported mobile devices and may expand to additional platforms in the future.
+Clpped is available on supported mobile devices and may expand to additional platforms in the future.
 
 ---
 
@@ -614,11 +614,11 @@ Yes, provided each account complies with our Terms of Use and Community Guidelin
 
 ### What kind of content can I upload?
 
-Clipped only allows podcast-related video clips and highlights.
+Clpped only allows podcast-related video clips and highlights.
 
 ### What is the maximum video length?
 
-All Clipped must be 2 minutes or less.
+All Clpped must be 2 minutes or less.
 
 ### What is the maximum file size?
 
@@ -626,7 +626,7 @@ Uploaded videos must not exceed 100MB.
 
 ### What video formats are supported?
 
-Clipped supports common video formats including MP4, MOV, and other compatible mobile video formats.
+Clpped supports common video formats including MP4, MOV, and other compatible mobile video formats.
 
 ### Why was my upload rejected?
 
@@ -664,7 +664,7 @@ Contact us via email with proof of ownership and details of the alleged infringe
 
 ### How do I discover new podcasts?
 
-Simply swipe through the Clipped feed to discover podcast highlights from creators worldwide.
+Simply swipe through the Clpped feed to discover podcast highlights from creators worldwide.
 
 ### Can I follow creators?
 
@@ -672,9 +672,9 @@ Yes. You can follow your favorite podcasters to stay updated when they upload ne
 
 ### Can I like and comment on videos?
 
-Yes. Clipped allows users to interact with content through likes, comments, and shares.
+Yes. Clpped allows users to interact with content through likes, comments, and shares.
 
-### Can I share Clipped to social media?
+### Can I share Clpped to social media?
 
 Absolutely. You can share content using your device's built-in sharing features.
 
@@ -726,15 +726,15 @@ Ensure you have the latest version installed and sufficient device storage avail
 
 ### Why am I not receiving notifications?
 
-Check your device notification settings and ensure Clipped notifications are enabled.
+Check your device notification settings and ensure Clpped notifications are enabled.
 
 ---
 
 # Privacy & Security
 
-### Does Clipped sell my data?
+### Does Clpped sell my data?
 
-No. Clipped does not sell user data to third parties.
+No. Clpped does not sell user data to third parties.
 
 ### How is my information protected?
 
@@ -752,7 +752,7 @@ Yes. Users may request account and data deletion at any time.
 
 # Contact & Support
 
-### How can I contact Clipped Support?
+### How can I contact Clpped Support?
 
 **Email:** [semogroup65@gmail.com](mailto:semogroup65@gmail.com)
 
@@ -760,7 +760,7 @@ Yes. Users may request account and data deletion at any time.
 
 Most inquiries receive a response within 24–48 business hours.
 
-### Where is Clipped based?
+### Where is Clpped based?
 
 **Se-Mo Group Tech**
 Sandton, Johannesburg, Gauteng, South Africa
@@ -773,7 +773,7 @@ If your question isn't answered here, please contact our support team at:
 
 **[semogroup65@gmail.com](mailto:semogroup65@gmail.com)**
 
-We're always happy to help and improve your Clipped experience.
+We're always happy to help and improve your Clpped experience.
 
 ---
 
@@ -783,21 +783,21 @@ export const TERMS_OF_USE_MD = String.raw`# Terms of Use
 
 **Effective Date:** June 2026
 
-Welcome to Clipped. These Terms of Use govern your access to and use of the Clipped application, website, and related services operated by Se-Mo Group Tech.
+Welcome to Clpped. These Terms of Use govern your access to and use of the Clpped application, website, and related services operated by Se-Mo Group Tech.
 
-By creating an account, accessing, browsing, or using Clipped, you acknowledge that you have read, understood, and agree to be bound by these Terms of Use. If you do not agree with any part of these terms, you must discontinue use of the platform immediately.
+By creating an account, accessing, browsing, or using Clpped, you acknowledge that you have read, understood, and agree to be bound by these Terms of Use. If you do not agree with any part of these terms, you must discontinue use of the platform immediately.
 
 ---
 
 # 1. Acceptance of Terms
 
-By using Clipped, you agree to comply with all applicable laws, regulations, and community standards. Your continued use of the platform constitutes acceptance of any future updates or modifications to these Terms of Use.
+By using Clpped, you agree to comply with all applicable laws, regulations, and community standards. Your continued use of the platform constitutes acceptance of any future updates or modifications to these Terms of Use.
 
 ---
 
 # 2. Eligibility
 
-To use Clipped, you must:
+To use Clpped, you must:
 
 • Be at least 13 years of age or meet the minimum age required in your jurisdiction.
 • Provide accurate and truthful registration information.
@@ -815,9 +815,9 @@ Users are responsible for:
 • Maintaining account security.
 • Keeping login credentials confidential.
 • All activity occurring under their account.
-• Promptly notifying Clipped of unauthorized access.
+• Promptly notifying Clpped of unauthorized access.
 
-Clipped reserves the right to suspend or terminate accounts that violate these terms.
+Clpped reserves the right to suspend or terminate accounts that violate these terms.
 
 ---
 
@@ -838,15 +838,15 @@ You agree not to:
 
 # 5. Content Ownership
 
-Users retain ownership of content they upload to Clipped.
+Users retain ownership of content they upload to Clpped.
 
-By posting content, you grant Clipped a worldwide, non-exclusive, royalty-free license to:
+By posting content, you grant Clpped a worldwide, non-exclusive, royalty-free license to:
 
 • Host content.
 • Store content.
 • Display content.
 • Distribute content through the platform.
-• Promote content within Clipped services.
+• Promote content within Clpped services.
 
 This license ends when content is permanently deleted, except where retention is required by law.
 
@@ -854,7 +854,7 @@ This license ends when content is permanently deleted, except where retention is
 
 # 6. Podcast Content Requirements
 
-Clipped is a platform dedicated to podcast discovery.
+Clpped is a platform dedicated to podcast discovery.
 
 All uploaded content must:
 
@@ -864,13 +864,13 @@ All uploaded content must:
 • Comply with Community Guidelines.
 • Follow all applicable laws and regulations.
 
-Clipped may remove content that does not meet these requirements.
+Clpped may remove content that does not meet these requirements.
 
 ---
 
 # 7. Intellectual Property
 
-All Clipped software, branding, logos, trademarks, graphics, designs, and technology remain the exclusive property of Se-Mo Group Tech.
+All Clpped software, branding, logos, trademarks, graphics, designs, and technology remain the exclusive property of Se-Mo Group Tech.
 
 Users may not copy, modify, distribute, reverse engineer, or exploit any part of the platform without written permission.
 
@@ -878,7 +878,7 @@ Users may not copy, modify, distribute, reverse engineer, or exploit any part of
 
 # 8. Privacy
 
-Your use of Clipped is also governed by our Privacy Policy.
+Your use of Clpped is also governed by our Privacy Policy.
 
 We are committed to protecting user information and handling personal data responsibly and securely.
 
@@ -886,7 +886,7 @@ We are committed to protecting user information and handling personal data respo
 
 # 9. Content Moderation
 
-Clipped reserves the right to:
+Clpped reserves the right to:
 
 • Review uploaded content.
 • Remove content violating policies.
@@ -894,13 +894,13 @@ Clipped reserves the right to:
 • Suspend or terminate user accounts.
 • Investigate reports submitted by users.
 
-Moderation decisions are made at the sole discretion of Clipped.
+Moderation decisions are made at the sole discretion of Clpped.
 
 ---
 
 # 10. Third-Party Services
 
-Clipped may integrate with third-party services, including analytics providers, authentication systems, and cloud hosting providers.
+Clpped may integrate with third-party services, including analytics providers, authentication systems, and cloud hosting providers.
 
 We are not responsible for the availability, security, or content of third-party services.
 
@@ -908,7 +908,7 @@ We are not responsible for the availability, security, or content of third-party
 
 # 11. Service Availability
 
-While we strive to provide reliable service, Clipped does not guarantee uninterrupted access.
+While we strive to provide reliable service, Clpped does not guarantee uninterrupted access.
 
 We may:
 
@@ -924,7 +924,7 @@ without prior notice.
 
 # 12. Limitation of Liability
 
-To the maximum extent permitted by law, Se-Mo Group Tech and Clipped shall not be liable for:
+To the maximum extent permitted by law, Se-Mo Group Tech and Clpped shall not be liable for:
 
 • Loss of data.
 • Loss of revenue.
@@ -940,7 +940,7 @@ Use of the platform is at your own risk.
 
 You agree to indemnify and hold harmless Se-Mo Group Tech, its employees, partners, and affiliates from claims, damages, liabilities, and expenses arising from:
 
-• Your use of Clipped.
+• Your use of Clpped.
 • Violation of these Terms of Use.
 • Violation of applicable laws.
 • Infringement of third-party rights.
@@ -966,7 +966,7 @@ We reserve the right to modify these Terms of Use at any time.
 
 Updated versions will be published within the application and become effective upon posting.
 
-Continued use of Clipped after updates constitutes acceptance of the revised terms.
+Continued use of Clpped after updates constitutes acceptance of the revised terms.
 
 ---
 

@@ -135,7 +135,7 @@ const CreatorDashboard = ({ onBack, profile, user }: { onBack: () => void; profi
           <div className="rounded-2xl border border-border bg-card p-4">
             <div className="flex items-center gap-2 mb-4">
               <BarChart3 className="w-4 h-4 text-primary" />
-              <h3 className="text-sm font-bold text-foreground">Top Clipped Performance</h3>
+              <h3 className="text-sm font-bold text-foreground">Top Clpped Performance</h3>
             </div>
             <div className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -163,7 +163,7 @@ const CreatorDashboard = ({ onBack, profile, user }: { onBack: () => void; profi
 
         {/* How to earn */}
         <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
-          <h3 className="text-sm font-bold">How to Earn on Clipped</h3>
+          <h3 className="text-sm font-bold">How to Earn on Clpped</h3>
           <div className="space-y-3">
             {[
               { title: 'Coffee Tips', desc: 'Fans can buy you coffee directly', icon: Coffee, status: 'Active' },
@@ -341,7 +341,7 @@ const Settings = () => {
         </div>
         <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
           <h3 className="text-sm font-bold text-foreground">Data & Privacy</h3>
-          <p className="text-xs text-muted-foreground">Your data is stored securely and never shared with third parties. Clipped uses end-to-end encryption for all personal data.</p>
+          <p className="text-xs text-muted-foreground">Your data is stored securely and never shared with third parties. Clpped uses end-to-end encryption for all personal data.</p>
           <p className="text-xs text-muted-foreground">You can request a copy of your data or request account deletion by contacting semogroup65@gmail.com</p>
         </div>
         <div className="rounded-2xl border border-border bg-card p-4 space-y-3">
@@ -500,11 +500,11 @@ const Settings = () => {
 
   if (subPage === 'about') return (
     <div className="min-h-screen bg-background pb-24">
-      <SubPageHeader title="About Clipped" />
+      <SubPageHeader title="About Clpped" />
       <div className="max-w-lg mx-auto p-4 space-y-4">
         <div className="flex flex-col items-center py-6">
-          <img src="/logo.png" alt="Clipped" className="w-16 h-16 rounded-2xl mb-3 shadow-lg" />
-          <h2 className="text-xl font-black text-gradient">Clipped</h2>
+          <img src="/logo.png" alt="Clpped" className="w-16 h-16 rounded-2xl mb-3 shadow-lg" />
+          <h2 className="text-xl font-black text-gradient">Clpped</h2>
           <p className="text-xs text-muted-foreground mt-1">Version 1.0.0</p>
         </div>
         <div className="rounded-2xl border border-border bg-card p-4">
@@ -608,7 +608,7 @@ const Settings = () => {
         </div>
 
         <p className="text-center text-xs text-muted-foreground pb-4">
-          Clipped v1.0 · © 2026
+          Clpped v1.0 · © 2026
         </p>
       </div>
 

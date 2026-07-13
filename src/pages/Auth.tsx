@@ -46,7 +46,7 @@ const Auth = () => {
           },
         });
         if (error) throw error;
-        toast({ title: 'Account created! Welcome to Clipped 🎙️' });
+        toast({ title: 'Account created! Welcome to Clpped 🎙️' });
         navigate('/feed');
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -64,8 +64,8 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <img src="/logo.png" alt="Clipped" className="w-16 h-16 rounded-2xl mx-auto mb-4 shadow-lg" />
-          <h1 className="text-4xl font-black text-gradient">Clipped</h1>
+          <img src="/logo.png" alt="Clpped" className="w-16 h-16 rounded-2xl mx-auto mb-4 shadow-lg" />
+          <h1 className="text-4xl font-black text-gradient">Clpped</h1>
           <p className="mt-2 text-muted-foreground">
             {isSignUp ? 'Create your account' : 'Welcome back'}
           </p>

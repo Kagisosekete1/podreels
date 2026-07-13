@@ -207,7 +207,7 @@ const Feed = () => {
   return (
     <div className="h-screen flex flex-col bg-background">
       <div className="absolute top-0 left-0 right-0 z-30 px-4 pt-4 pb-2">
-        <span className="text-primary-foreground font-black text-lg drop-shadow-lg" style={{ opacity: 0.4 }}>Clipped</span>
+        <span className="text-primary-foreground font-black text-lg drop-shadow-lg" style={{ opacity: 0.4 }}>Clpped</span>
       </div>
       <div
         ref={containerRef}

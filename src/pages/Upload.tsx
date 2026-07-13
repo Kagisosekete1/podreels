@@ -6,9 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Upload as UploadIcon, Loader2, Film, ImagePlus, Clapperboard, Tag, Type, AlignLeft, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import BottomNav from '@/components/BottomNav';
+
+const CATEGORIES = ['Comedy', 'True Crime', 'Tech', 'Business', 'Health', 'Education', 'News', 'Sports', 'Music', 'Lifestyle', 'Science', 'Other', 'General', 'CRIME'];
 
 const Upload = () => {
   const navigate = useNavigate();
@@ -192,27 +195,6 @@ const Upload = () => {
 
         {/* Details card */}
         <div className="rounded-2xl border border-border bg-card p-4 space-y-5">
-          {/* Thumbnail */}
-          <div>
-            <Label className="flex items-center gap-1.5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <ImagePlus className="w-3.5 h-3.5" /> Thumbnail <span className="font-normal normal-case tracking-normal text-muted-foreground/70">(optional)</span>
-            </Label>
-            <div
-              onClick={() => thumbInputRef.current?.click()}
-              className="h-24 w-40 rounded-xl border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all overflow-hidden"
-            >
-              {thumbnailPreview ? (
-                <img src={thumbnailPreview} className="w-full h-full object-cover" alt="Thumbnail" />
-              ) : (
-                <div className="flex flex-col items-center">
-                  <ImagePlus className="w-6 h-6 text-muted-foreground" />
-                  <p className="text-[10px] text-muted-foreground mt-1">JPG · PNG · WebP</p>
-                </div>
-              )}
-            </div>
-            <input ref={thumbInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleThumbnailChange} />
-          </div>
-
           <div>
             <Label htmlFor="title" className="flex items-center gap-1.5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <Type className="w-3.5 h-3.5" /> Title <span className="text-primary">*</span>
@@ -240,7 +222,37 @@ const Upload = () => {
             <Label htmlFor="category" className="flex items-center gap-1.5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <Tag className="w-3.5 h-3.5" /> Category
             </Label>
-            <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Comedy, Tech, True Crime..." maxLength={30} className="rounded-xl" />
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger id="category" className="rounded-xl">
+                <SelectValue placeholder="Pick a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Thumbnail */}
+          <div>
+            <Label className="flex items-center gap-1.5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <ImagePlus className="w-3.5 h-3.5" /> Thumbnail <span className="font-normal normal-case tracking-normal text-muted-foreground/70">(optional)</span>
+            </Label>
+            <div
+              onClick={() => thumbInputRef.current?.click()}
+              className="h-24 w-40 rounded-xl border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all overflow-hidden"
+            >
+              {thumbnailPreview ? (
+                <img src={thumbnailPreview} className="w-full h-full object-cover" alt="Thumbnail" />
+              ) : (
+                <div className="flex flex-col items-center">
+                  <ImagePlus className="w-6 h-6 text-muted-foreground" />
+                  <p className="text-[10px] text-muted-foreground mt-1">JPG · PNG · WebP</p>
+                </div>
+              )}
+            </div>
+            <input ref={thumbInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleThumbnailChange} />
           </div>
         </div>
 

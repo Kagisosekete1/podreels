@@ -424,9 +424,6 @@ const Profile = () => {
             <>
               <h2 className="font-bold text-lg flex items-center gap-2">
                 {profileData.display_name || profileData.username}
-                {profileData.is_podcaster && (
-                  <span className="px-1.5 py-[1px] text-[8px] font-bold rounded-md gradient-primary text-primary-foreground tracking-wide">🎙️</span>
-                )}
               </h2>
               {profileData.bio && <p className="text-sm text-muted-foreground mt-1">{profileData.bio}</p>}
             </>
