@@ -37,7 +37,7 @@ const BottomNav = () => {
   if (!isMobile) return null;
 
   const items = [
-    { icon: Home, label: 'Clipped', path: '/feed' },
+    { icon: Home, label: 'Clpped', path: '/feed' },
     { icon: Compass, label: 'Discover', path: '/discover' },
     { icon: null, label: '', path: '/upload', special: true },
     { icon: Bell, label: 'Alerts', path: '/notifications' },
