@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
-import { Search, TrendingUp, Hash, Eye, Play, Pause, X, Volume2, VolumeX, Bug, ClipboardCheck } from 'lucide-react';
+import { Search, TrendingUp, Hash, Eye, Play, Pause, X, Bug, ClipboardCheck } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import ReelPlayer from '@/components/ReelPlayer';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,6 +48,7 @@ const Discover = () => {
   const [qaOpen, setQaOpen] = useState(false);
   const [qaResults, setQaResults] = useState<{ name: string; pass: boolean | null; detail?: string }[]>([]);
   const [qaRunning, setQaRunning] = useState(false);
+  const [showAllTrends, setShowAllTrends] = useState(false);
 
   // Check admin role
   useEffect(() => {
@@ -332,19 +333,6 @@ const Discover = () => {
     const t2 = setTimeout(tryPause, 200);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [openReel, restoredWithoutAutoplay]);
-
-  // Toggle overlay mute synchronously inside the user gesture (iOS requirement).
-  const toggleOverlayMute = () => {
-    const v = overlayRef.current?.querySelector('video') as HTMLVideoElement | null;
-    const next = !overlayMuted;
-    if (v) {
-      v.muted = next;
-      // Calling play() in the same gesture is what allows iOS to honor unmute.
-      v.play().catch(() => {});
-    }
-    setOverlayMuted(next);
-    if (restoredWithoutAutoplay) setRestoredWithoutAutoplay(false);
-  };
 
   const closeOverlay = () => {
     // Ensure overlay video is fully stopped so nothing keeps playing in the background.
