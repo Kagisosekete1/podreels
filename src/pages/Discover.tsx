@@ -203,11 +203,9 @@ const Discover = () => {
     if (openLiked) {
       setOpenLiked(false);
       await supabase.from('likes').delete().eq('user_id', user.id).eq('reel_id', openReel.id);
-      await supabase.from('reels').update({ likes_count: Math.max(0, (openReel.likes_count || 0) - 1) }).eq('id', openReel.id);
     } else {
       setOpenLiked(true);
       await supabase.from('likes').insert({ user_id: user.id, reel_id: openReel.id });
-      await supabase.from('reels').update({ likes_count: (openReel.likes_count || 0) + 1 }).eq('id', openReel.id);
     }
   };
 

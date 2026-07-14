@@ -171,11 +171,9 @@ const Feed = () => {
     if (isLiked) {
       setLikedReels(prev => { const n = new Set(prev); n.delete(reelId); return n; });
       await supabase.from('likes').delete().eq('user_id', user.id).eq('reel_id', reelId);
-      await supabase.from('reels').update({ likes_count: Math.max(0, reel.likes_count - 1) }).eq('id', reelId);
     } else {
       setLikedReels(prev => new Set(prev).add(reelId));
       await supabase.from('likes').insert({ user_id: user.id, reel_id: reelId });
-      await supabase.from('reels').update({ likes_count: reel.likes_count + 1 }).eq('id', reelId);
     }
   };
 
