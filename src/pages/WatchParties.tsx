@@ -35,8 +35,9 @@ const WatchParties = () => {
   // Prefill from a reel ("watch full episode" flow)
   const prefillReel = params.get('reel');
   const prefillTitle = params.get('title') || '';
+  const prefillVideo = params.get('video') || '';
   const [title, setTitle] = useState(prefillTitle);
-  const [url, setUrl] = useState('');
+  const [url, setUrl] = useState(prefillVideo ? `https://youtu.be/${prefillVideo}` : '');
   const [isPublic, setIsPublic] = useState(true);
 
   useEffect(() => {

@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Upload as UploadIcon, Loader2, Film, ImagePlus, Clapperboard, Tag, Type, AlignLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft, Upload as UploadIcon, Loader2, Film, ImagePlus, Clapperboard, Tag, Type, AlignLeft, Sparkles, Tv } from 'lucide-react';
+import { extractYouTubeId } from '@/lib/youtube';
 import { useToast } from '@/hooks/use-toast';
 import BottomNav from '@/components/BottomNav';
 
@@ -27,6 +28,7 @@ const Upload = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [partyLink, setPartyLink] = useState('');
   const [uploading, setUploading] = useState(false);
 
   const wordCount = description.trim() ? description.trim().split(/\s+/).filter(Boolean).length : 0;
@@ -75,6 +77,11 @@ const Upload = () => {
       return;
     }
 
+    const trimmedPartyLink = partyLink.trim();
+    if (trimmedPartyLink && !extractYouTubeId(trimmedPartyLink)) {
+      toast({ title: 'Watch Party link must be a valid YouTube URL', variant: 'destructive' });
+      return;
+    }
 
     setUploading(true);
     try {
@@ -123,6 +130,7 @@ const Upload = () => {
         category: category.trim() || 'General',
         duration_seconds: duration,
         hashtags: hashtags.length > 0 ? hashtags : [],
+        party_link: trimmedPartyLink || null,
       });
 
       if (insertError) throw insertError;
@@ -253,6 +261,21 @@ const Upload = () => {
               )}
             </div>
             <input ref={thumbInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleThumbnailChange} />
+          </div>
+
+          {/* Watch Party full-episode link */}
+          <div>
+            <Label htmlFor="party_link" className="flex items-center gap-1.5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <Tv className="w-3.5 h-3.5" /> Watch Party link <span className="font-normal normal-case tracking-normal text-muted-foreground/70">(optional)</span>
+            </Label>
+            <Input
+              id="party_link"
+              value={partyLink}
+              onChange={(e) => setPartyLink(e.target.value)}
+              placeholder="Paste the full episode YouTube link"
+              className="rounded-xl"
+            />
+            <p className="text-[11px] mt-1.5 text-muted-foreground">Add a full episode link so viewers can host a Watch Party from your clip.</p>
           </div>
         </div>
 

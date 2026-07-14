@@ -376,6 +376,7 @@ export type Database = {
           hashtags: string[] | null
           id: string
           likes_count: number
+          party_link: string | null
           podcast_name: string | null
           thumbnail_url: string | null
           title: string
@@ -393,6 +394,7 @@ export type Database = {
           hashtags?: string[] | null
           id?: string
           likes_count?: number
+          party_link?: string | null
           podcast_name?: string | null
           thumbnail_url?: string | null
           title: string
@@ -410,6 +412,7 @@ export type Database = {
           hashtags?: string[] | null
           id?: string
           likes_count?: number
+          party_link?: string | null
           podcast_name?: string | null
           thumbnail_url?: string | null
           title?: string
