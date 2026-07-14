@@ -7,6 +7,7 @@ import AdOverlay from '@/components/AdOverlay';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { extractYouTubeId } from '@/lib/youtube';
 import { toast } from 'sonner';
 
 interface ReelPlayerProps {
@@ -23,6 +24,7 @@ interface ReelPlayerProps {
     user_id: string;
     hashtags?: string[];
     duration_seconds?: number;
+    party_link?: string | null;
     profiles: {
       username: string;
       display_name: string | null;
@@ -254,6 +256,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
   // Open the full episode in a Watch Party: reuse an existing party for this
   // reel if one is live, otherwise start a new one prefilled with the reel.
   const handleWatchParty = async () => {
+    const isOwner = !!(user && user.id === reel.user_id);
     const { data } = await supabase
       .from('watch_parties')
       .select('id')
@@ -267,10 +270,15 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       return;
     }
     // Only the reel owner can host a party for their clip.
-    if (user && user.id === reel.user_id) {
-      navigate(`/watch-parties?reel=${reel.id}&title=${encodeURIComponent(reel.title)}`);
+    if (isOwner) {
+      const vid = reel.party_link ? extractYouTubeId(reel.party_link) : null;
+      const qs = new URLSearchParams({ reel: reel.id, title: reel.title });
+      if (vid) qs.set('video', vid);
+      navigate(`/watch-parties?${qs.toString()}`);
     } else {
-      toast('No hosted party right now — come back another time.');
+      toast('No hosted party right now — check again later.', {
+        action: { label: 'Check again', onClick: () => handleWatchParty() },
+      });
     }
   };
 
