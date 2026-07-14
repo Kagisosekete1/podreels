@@ -38,6 +38,9 @@ const WatchParty = () => {
   const playerRef = useRef<YouTubePlayerHandle>(null);
 
   const [party, setParty] = useState<Party | null>(null);
+  const [reelPartyLink, setReelPartyLink] = useState<string | null>(null);
+  const [savingLink, setSavingLink] = useState(false);
+  const [linkInput, setLinkInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState<Msg[]>([]);
   const [queue, setQueue] = useState<QItem[]>([]);
@@ -76,6 +79,13 @@ const WatchParty = () => {
       setParty(data as Party);
       setLoading(false);
       cacheProfiles([data.host_id]);
+
+      // Load the reel's current hosted party link (only meaningful for the host)
+      if (data.reel_id) {
+        const { data: r } = await supabase.from('reels').select('party_link').eq('id', data.reel_id).maybeSingle();
+        setReelPartyLink((r as any)?.party_link || null);
+        setLinkInput((r as any)?.party_link || '');
+      }
 
       if (user) {
         await supabase.from('party_members').insert({ party_id: id, user_id: user.id }).select().maybeSingle();
@@ -226,6 +236,23 @@ const WatchParty = () => {
     await supabase.from('watch_parties').delete().eq('id', id);
   };
 
+  const saveHostedLink = async () => {
+    if (!isHost || !party?.reel_id) return;
+    const value = linkInput.trim();
+    if (value && !extractYouTubeId(value)) { toast.error('Paste a valid YouTube link'); return; }
+    setSavingLink(true);
+    const { error } = await supabase.from('reels').update({ party_link: value || null }).eq('id', party.reel_id);
+    setSavingLink(false);
+    if (error) { toast.error('Could not save hosted party link'); return; }
+    setReelPartyLink(value || null);
+    toast.success(value ? 'Hosted party link saved for this clip' : 'Hosted party link cleared');
+  };
+
+  const useCurrentVideoAsLink = () => {
+    if (!party?.youtube_video_id) return;
+    setLinkInput(`https://youtu.be/${party.youtube_video_id}`);
+  };
+
   if (loading || !party) {
     return <div className="h-screen flex items-center justify-center bg-background"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
   }
@@ -298,6 +325,24 @@ const WatchParty = () => {
             >
               <Film className="w-4 h-4 text-primary" /> This party is linked to a Clpped reel
             </button>
+          )}
+
+          {/* Host-only: persist the hosted party link on the reel */}
+          {isHost && party.reel_id && (
+            <div className="rounded-xl border border-border p-3 space-y-2">
+              <p className="text-sm font-semibold flex items-center gap-1"><Film className="w-4 h-4 text-primary" /> Hosted party link for this clip</p>
+              <p className="text-xs text-muted-foreground">
+                Save the full episode YouTube link so future viewers can open this Watch Party from your clip.
+                {reelPartyLink ? ' A link is currently saved.' : ' No link is saved yet.'}
+              </p>
+              <div className="flex gap-2">
+                <Input value={linkInput} onChange={(e) => setLinkInput(e.target.value)} placeholder="https://youtube.com/watch?v=..." className="h-9" />
+                <Button size="sm" variant="secondary" onClick={useCurrentVideoAsLink} disabled={!party.youtube_video_id}>Use current</Button>
+                <Button size="sm" onClick={saveHostedLink} disabled={savingLink} className="gradient-primary text-primary-foreground">
+                  {savingLink ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
+                </Button>
+              </div>
+            </div>
           )}
 
           {/* Queue */}
