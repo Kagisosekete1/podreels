@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Share2, Play, Bookmark, Send, Trash2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Play, Bookmark, Send, Trash2, Tv } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import CommentsSheet from '@/components/CommentsSheet';
 import AdOverlay from '@/components/AdOverlay';
@@ -251,6 +251,24 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
     }
   };
 
+  // Open the full episode in a Watch Party: reuse an existing party for this
+  // reel if one is live, otherwise start a new one prefilled with the reel.
+  const handleWatchParty = async () => {
+    const { data } = await supabase
+      .from('watch_parties')
+      .select('id')
+      .eq('reel_id', reel.id)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data?.id) {
+      navigate(`/watch-parties/${data.id}`);
+    } else {
+      navigate(`/watch-parties?reel=${reel.id}&title=${encodeURIComponent(reel.title)}`);
+    }
+  };
+
   const handleSave = async () => {
     if (!user) return;
     if (isSaved) {
@@ -405,6 +423,11 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
             <span className="text-muted-foreground text-[10px]">Reshare</span>
           </button>
 
+        <button onClick={handleWatchParty} className="flex flex-col items-center gap-0.5">
+          <Tv className="w-6 h-6 text-muted-foreground hover:text-foreground" />
+          <span className="text-muted-foreground text-[10px]">Party</span>
+        </button>
+
           {user?.id === reel.user_id && (
             <button onClick={handleDelete} className="flex flex-col items-center gap-0.5">
               <Trash2 className="w-6 h-6 text-muted-foreground hover:text-destructive" />
@@ -490,6 +513,11 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         <button onClick={handleShare} className="flex flex-col items-center gap-0.5">
           <Share2 className="w-5 h-5 text-primary-foreground" />
           <span className="text-primary-foreground text-[10px]">Reshare</span>
+        </button>
+
+        <button onClick={handleWatchParty} className="flex flex-col items-center gap-0.5">
+          <Tv className="w-5 h-5 text-primary-foreground" />
+          <span className="text-primary-foreground text-[10px]">Party</span>
         </button>
 
         {user?.id === reel.user_id && (

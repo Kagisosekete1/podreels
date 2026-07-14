@@ -164,6 +164,137 @@ export type Database = {
           },
         ]
       }
+      party_members: {
+        Row: {
+          id: string
+          joined_at: string
+          party_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          party_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          party_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_members_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "watch_parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          party_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          party_id: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          party_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_messages_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "watch_parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_queue: {
+        Row: {
+          added_by: string
+          created_at: string
+          id: string
+          party_id: string
+          position: number
+          title: string | null
+          youtube_video_id: string
+        }
+        Insert: {
+          added_by: string
+          created_at?: string
+          id?: string
+          party_id: string
+          position?: number
+          title?: string | null
+          youtube_video_id: string
+        }
+        Update: {
+          added_by?: string
+          created_at?: string
+          id?: string
+          party_id?: string
+          position?: number
+          title?: string | null
+          youtube_video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_queue_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "watch_parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      party_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          id: string
+          party_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          id?: string
+          party_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          id?: string
+          party_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_reactions_party_id_fkey"
+            columns: ["party_id"]
+            isOneToOne: false
+            referencedRelation: "watch_parties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -344,11 +475,74 @@ export type Database = {
         }
         Relationships: []
       }
+      watch_parties: {
+        Row: {
+          created_at: string
+          host_id: string
+          id: string
+          invite_code: string
+          is_active: boolean
+          is_playing: boolean
+          is_public: boolean
+          last_sync_at: string
+          playback_time: number
+          reel_id: string | null
+          title: string
+          updated_at: string
+          views_count: number
+          youtube_video_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          host_id: string
+          id?: string
+          invite_code?: string
+          is_active?: boolean
+          is_playing?: boolean
+          is_public?: boolean
+          last_sync_at?: string
+          playback_time?: number
+          reel_id?: string | null
+          title: string
+          updated_at?: string
+          views_count?: number
+          youtube_video_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          host_id?: string
+          id?: string
+          invite_code?: string
+          is_active?: boolean
+          is_playing?: boolean
+          is_public?: boolean
+          last_sync_at?: string
+          playback_time?: number
+          reel_id?: string | null
+          title?: string
+          updated_at?: string
+          views_count?: number
+          youtube_video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watch_parties_reel_id_fkey"
+            columns: ["reel_id"]
+            isOneToOne: false
+            referencedRelation: "reels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      can_view_party: {
+        Args: { _party: string; _uid: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -359,6 +553,10 @@ export type Database = {
       increment_view: { Args: { reel_uuid: string }; Returns: undefined }
       increment_view_safe: {
         Args: { reel_uuid: string; viewer_id: string }
+        Returns: boolean
+      }
+      is_party_host: {
+        Args: { _party: string; _uid: string }
         Returns: boolean
       }
     }
