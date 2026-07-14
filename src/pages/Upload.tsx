@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Upload as UploadIcon, Loader2, Film, ImagePlus, Clapperboard, Tag, Type, AlignLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft, Upload as UploadIcon, Loader2, Film, ImagePlus, Clapperboard, Tag, Type, AlignLeft, Sparkles, Tv } from 'lucide-react';
+import { extractYouTubeId } from '@/lib/youtube';
 import { useToast } from '@/hooks/use-toast';
 import BottomNav from '@/components/BottomNav';
 
@@ -27,6 +28,7 @@ const Upload = () => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
+  const [partyLink, setPartyLink] = useState('');
   const [uploading, setUploading] = useState(false);
 
   const wordCount = description.trim() ? description.trim().split(/\s+/).filter(Boolean).length : 0;
@@ -75,6 +77,11 @@ const Upload = () => {
       return;
     }
 
+    const trimmedPartyLink = partyLink.trim();
+    if (trimmedPartyLink && !extractYouTubeId(trimmedPartyLink)) {
+      toast({ title: 'Watch Party link must be a valid YouTube URL', variant: 'destructive' });
+      return;
+    }
 
     setUploading(true);
     try {
@@ -123,6 +130,7 @@ const Upload = () => {
         category: category.trim() || 'General',
         duration_seconds: duration,
         hashtags: hashtags.length > 0 ? hashtags : [],
+        party_link: trimmedPartyLink || null,
       });
 
       if (insertError) throw insertError;
