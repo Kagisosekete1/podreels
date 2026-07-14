@@ -125,3 +125,13 @@
     scroll-snap-align: start;
   }
 }
+
+/* Watch Party floating emoji reactions */
+@keyframes party-float-up {
+  0% { transform: translateY(0) scale(0.8); opacity: 0; }
+  15% { opacity: 1; transform: translateY(-10px) scale(1.1); }
+  100% { transform: translateY(-160px) scale(1); opacity: 0; }
+}
+.animate-party-float {
+  animation: party-float-up 3s ease-out forwards;
+}

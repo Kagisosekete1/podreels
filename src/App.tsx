@@ -17,6 +17,8 @@ import HashtagFeed from "./pages/HashtagFeed";
 import ProfileFeed from "./pages/ProfileFeed";
 import Notifications from "./pages/Notifications";
 import BuyCoke from "./pages/BuyCoke";
+import WatchParties from "./pages/WatchParties";
+import WatchParty from "./pages/WatchParty";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +44,8 @@ const App = () => (
               <Route path="/hashtag/:tag" element={<HashtagFeed />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/buy-coke" element={<BuyCoke />} />
+              <Route path="/watch-parties" element={<WatchParties />} />
+              <Route path="/watch-parties/:id" element={<WatchParty />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AppLayout>

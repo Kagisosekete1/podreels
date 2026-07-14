@@ -31,10 +31,13 @@
     <script>
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       OneSignalDeferred.push(async function (OneSignal) {
-        await OneSignal.init({
-          appId: "24f646c5-08fb-45e0-bbbc-3ae4f1bdc672",
-          allowLocalhostAsSecureOrigin: true,
-        });
+        // OneSignal web config is locked to the production domain, so only
+        // initialise there to avoid errors in local/preview builds.
+        if (location.hostname === "clpped.lovable.app") {
+          await OneSignal.init({
+            appId: "24f646c5-08fb-45e0-bbbc-3ae4f1bdc672",
+          });
+        }
       });
     </script>
   </head>
