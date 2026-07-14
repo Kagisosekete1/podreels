@@ -264,8 +264,13 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       .maybeSingle();
     if (data?.id) {
       navigate(`/watch-parties/${data.id}`);
-    } else {
+      return;
+    }
+    // Only the reel owner can host a party for their clip.
+    if (user && user.id === reel.user_id) {
       navigate(`/watch-parties?reel=${reel.id}&title=${encodeURIComponent(reel.title)}`);
+    } else {
+      toast('No hosted party right now — come back another time.');
     }
   };
 
