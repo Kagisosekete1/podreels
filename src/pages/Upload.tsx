@@ -262,6 +262,21 @@ const Upload = () => {
             </div>
             <input ref={thumbInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleThumbnailChange} />
           </div>
+
+          {/* Watch Party full-episode link */}
+          <div>
+            <Label htmlFor="party_link" className="flex items-center gap-1.5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <Tv className="w-3.5 h-3.5" /> Watch Party link <span className="font-normal normal-case tracking-normal text-muted-foreground/70">(optional)</span>
+            </Label>
+            <Input
+              id="party_link"
+              value={partyLink}
+              onChange={(e) => setPartyLink(e.target.value)}
+              placeholder="Paste the full episode YouTube link"
+              className="rounded-xl"
+            />
+            <p className="text-[11px] mt-1.5 text-muted-foreground">Add a full episode link so viewers can host a Watch Party from your clip.</p>
+          </div>
         </div>
 
         <Button
