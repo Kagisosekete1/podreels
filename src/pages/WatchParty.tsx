@@ -2,14 +2,14 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { extractYouTubeId, youTubeThumb } from '@/lib/youtube';
+import { extractYouTubeId } from '@/lib/youtube';
 import YouTubePlayer, { YouTubePlayerHandle } from '@/components/YouTubePlayer';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  ArrowLeft, Users, Eye, Send, Share2, Play, Pause, SkipForward,
-  ListPlus, Trash2, Film, Globe, Lock, Loader2, Crown,
+  ArrowLeft, Users, Eye, Send, Share2, Play, Pause,
+  Trash2, Film, Globe, Lock, Loader2, Crown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -26,7 +26,6 @@ interface Party {
   views_count: number;
 }
 interface Msg { id: string; user_id: string; content: string; created_at: string; }
-interface QItem { id: string; youtube_video_id: string; title: string | null; added_by: string; created_at: string; }
 interface Floating { key: string; emoji: string; left: number; }
 
 const EMOJIS = ['❤️', '😂', '🔥', '👏', '😮', '💯'];
@@ -43,13 +42,12 @@ const WatchParty = () => {
   const [linkInput, setLinkInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState<Msg[]>([]);
-  const [queue, setQueue] = useState<QItem[]>([]);
   const [memberCount, setMemberCount] = useState(0);
   const [profiles, setProfiles] = useState<Record<string, { username: string; avatar_url: string | null }>>({});
   const [chatInput, setChatInput] = useState('');
-  const [queueInput, setQueueInput] = useState('');
   const [floaters, setFloaters] = useState<Floating[]>([]);
   const [playerReady, setPlayerReady] = useState(false);
+  const [viewerStarted, setViewerStarted] = useState(false);
 
   const applyingRemote = useRef(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -91,16 +89,14 @@ const WatchParty = () => {
         await supabase.from('party_members').insert({ party_id: id, user_id: user.id }).select().maybeSingle();
       }
 
-      const [{ data: msgs }, { data: q }, { count }] = await Promise.all([
+      const [{ data: msgs }, { count }] = await Promise.all([
         supabase.from('party_messages').select('*').eq('party_id', id).order('created_at', { ascending: true }).limit(100),
-        supabase.from('party_queue').select('*').eq('party_id', id).order('created_at', { ascending: true }),
         supabase.from('party_members').select('*', { count: 'exact', head: true }).eq('party_id', id),
       ]);
       if (!active) return;
       setMessages((msgs || []) as Msg[]);
-      setQueue((q || []) as QItem[]);
       setMemberCount(count || 0);
-      cacheProfiles([...(msgs || []).map(m => m.user_id), ...(q || []).map(x => x.added_by)]);
+      cacheProfiles((msgs || []).map(m => m.user_id));
     })();
     return () => { active = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -119,12 +115,6 @@ const WatchParty = () => {
         (p) => { const m = p.new as Msg; setMessages(prev => [...prev, m]); cacheProfiles([m.user_id]); })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'party_reactions', filter: `party_id=eq.${id}` },
         (p) => spawnFloater((p.new as any).emoji))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'party_queue', filter: `party_id=eq.${id}` },
-        async () => {
-          const { data } = await supabase.from('party_queue').select('*').eq('party_id', id).order('created_at', { ascending: true });
-          setQueue((data || []) as QItem[]);
-          cacheProfiles((data || []).map(x => x.added_by));
-        })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'party_members', filter: `party_id=eq.${id}` },
         async () => {
           const { count } = await supabase.from('party_members').select('*', { count: 'exact', head: true }).eq('party_id', id);
@@ -145,7 +135,7 @@ const WatchParty = () => {
 
   // Viewer sync: apply host state to local player
   useEffect(() => {
-    if (!party || isHost || !playerReady) return;
+    if (!party || isHost || !playerReady || !viewerStarted) return;
     const player = playerRef.current;
     if (!player) return;
     applyingRemote.current = true;
@@ -156,7 +146,7 @@ const WatchParty = () => {
     if (party.is_playing) player.play(); else player.pause();
     const t = setTimeout(() => { applyingRemote.current = false; }, 800);
     return () => clearTimeout(t);
-  }, [party?.is_playing, party?.playback_time, party?.last_sync_at, party?.youtube_video_id, isHost, playerReady]);
+  }, [party?.is_playing, party?.playback_time, party?.last_sync_at, party?.youtube_video_id, isHost, playerReady, viewerStarted]);
 
   // Host: push playback state
   const pushState = useCallback(async (playing: boolean) => {
@@ -179,20 +169,7 @@ const WatchParty = () => {
     if (!isHost || applyingRemote.current) return;
     if (state === 1) pushState(true);       // playing
     else if (state === 2) pushState(false); // paused
-    else if (state === 0) playNext();       // ended -> advance queue
-  };
-
-  const playNext = async () => {
-    if (!isHost || !id) return;
-    const next = queue[0];
-    if (!next) { await supabase.from('watch_parties').update({ is_playing: false }).eq('id', id); return; }
-    await supabase.from('party_queue').delete().eq('id', next.id);
-    await supabase.from('watch_parties').update({
-      youtube_video_id: next.youtube_video_id,
-      playback_time: 0,
-      is_playing: true,
-      last_sync_at: new Date().toISOString(),
-    }).eq('id', id);
+    else if (state === 0) pushState(false); // ended
   };
 
   const togglePlay = () => {
@@ -213,16 +190,6 @@ const WatchParty = () => {
     spawnFloater(emoji); // optimistic
     await supabase.from('party_reactions').insert({ party_id: id, user_id: user.id, emoji });
   };
-
-  const addToQueue = async () => {
-    if (!user || !id) return;
-    const vid = extractYouTubeId(queueInput);
-    if (!vid) { toast.error('Paste a valid YouTube link'); return; }
-    setQueueInput('');
-    await supabase.from('party_queue').insert({ party_id: id, youtube_video_id: vid, added_by: user.id });
-  };
-
-  const removeFromQueue = async (qid: string) => { await supabase.from('party_queue').delete().eq('id', qid); };
 
   const sharePartyLink = async () => {
     const url = `${window.location.origin}/watch-parties/${id}`;
@@ -274,7 +241,9 @@ const WatchParty = () => {
         </div>
         <span className="flex items-center gap-1 text-xs text-muted-foreground"><Users className="w-3.5 h-3.5" /> {memberCount}</span>
         <span className="flex items-center gap-1 text-xs text-muted-foreground"><Eye className="w-3.5 h-3.5" /> {party.views_count}</span>
-        <button onClick={sharePartyLink} className="p-1.5 rounded-full hover:bg-secondary"><Share2 className="w-4 h-4" /></button>
+        {isHost && (
+          <button onClick={sharePartyLink} className="p-1.5 rounded-full hover:bg-secondary"><Share2 className="w-4 h-4" /></button>
+        )}
       </div>
 
       <div className="flex-1 flex flex-col lg:flex-row gap-4 p-3 max-w-6xl mx-auto w-full">
@@ -288,6 +257,22 @@ const WatchParty = () => {
               onReady={() => setPlayerReady(true)}
               onStateChange={handleStateChange}
             />
+            {!isHost && !viewerStarted && playerReady && (
+              <button
+                onClick={() => {
+                  setViewerStarted(true);
+                  playerRef.current?.play();
+                }}
+                className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+              >
+                <div className="flex flex-col items-center gap-2 text-white">
+                  <div className="w-14 h-14 rounded-full bg-primary/90 flex items-center justify-center">
+                    <Play className="w-7 h-7 fill-white ml-0.5" />
+                  </div>
+                  <span className="text-sm font-semibold">Tap to join the party</span>
+                </div>
+              </button>
+            )}
             {/* Floating reactions */}
             <div className="pointer-events-none absolute inset-0 overflow-hidden">
               {floaters.map(f => (
@@ -303,7 +288,6 @@ const WatchParty = () => {
                 {party.is_playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                 {party.is_playing ? 'Pause' : 'Play'}
               </Button>
-              <Button size="sm" variant="secondary" onClick={playNext} className="gap-1"><SkipForward className="w-4 h-4" /> Next</Button>
               <Button size="sm" variant="ghost" onClick={endParty} className="gap-1 text-destructive ml-auto"><Trash2 className="w-4 h-4" /> End</Button>
             </div>
           ) : (
@@ -316,16 +300,6 @@ const WatchParty = () => {
               <button key={e} onClick={() => sendReaction(e)} className="w-9 h-9 rounded-full bg-secondary hover:bg-secondary/70 text-lg flex items-center justify-center">{e}</button>
             ))}
           </div>
-
-          {/* Linked reel */}
-          {party.reel_id && (
-            <button
-              onClick={() => navigate(`/discover`)}
-              className="w-full flex items-center gap-2 rounded-lg border border-border p-3 text-sm hover:border-primary/50"
-            >
-              <Film className="w-4 h-4 text-primary" /> This party is linked to a Clpped reel
-            </button>
-          )}
 
           {/* Host-only: persist the hosted party link on the reel */}
           {isHost && party.reel_id && (
@@ -344,27 +318,6 @@ const WatchParty = () => {
               </div>
             </div>
           )}
-
-          {/* Queue */}
-          <div className="rounded-xl border border-border p-3">
-            <p className="text-sm font-semibold mb-2 flex items-center gap-1"><ListPlus className="w-4 h-4" /> Up next ({queue.length})</p>
-            <div className="flex gap-2 mb-3">
-              <Input value={queueInput} onChange={(e) => setQueueInput(e.target.value)} placeholder="Paste a YouTube link to queue" className="h-9" />
-              <Button size="sm" onClick={addToQueue}>Add</Button>
-            </div>
-            <div className="space-y-2">
-              {queue.length === 0 && <p className="text-xs text-muted-foreground">Nothing queued yet.</p>}
-              {queue.map(q => (
-                <div key={q.id} className="flex items-center gap-2">
-                  <img src={youTubeThumb(q.youtube_video_id)} alt="" className="w-16 h-9 rounded object-cover" loading="lazy" />
-                  <span className="flex-1 text-xs text-muted-foreground truncate">Added by @{profiles[q.added_by]?.username || '...'}</span>
-                  {(isHost || q.added_by === user?.id) && (
-                    <button onClick={() => removeFromQueue(q.id)} className="p-1 text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Right: chat */}

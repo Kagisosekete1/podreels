@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Lock, Bell, DollarSign, Moon, Sun, Wifi, Globe, HelpCircle, Info, Shield, LogOut, ChevronRight, ChevronLeft, X, Settings as SettingsIcon, Check, Eye, Heart, Users, TrendingUp, BarChart3, Palette, MessageCircleQuestion } from 'lucide-react';
+import { ArrowLeft, User, Lock, Bell, DollarSign, Moon, Sun, Wifi, Globe, HelpCircle, Info, Shield, LogOut, ChevronRight, ChevronLeft, X, Settings as SettingsIcon, Check, Eye, Heart, Users, TrendingUp, BarChart3, Palette, MessageCircleQuestion, Tv, Film, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -14,10 +14,11 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, 
 import Markdown from '@/components/Markdown';
 import { ABOUT_MD, TERMS_MD, HELP_MD, FAQ_MD } from '@/lib/legal';
 import { useColorTheme } from '@/contexts/ThemeContext';
+import { extractYouTubeId } from '@/lib/youtube';
 
 import { Coffee } from 'lucide-react';
 
-type SubPage = null | 'account' | 'privacy' | 'notifications' | 'earnings' | 'darkmode' | 'quality' | 'language' | 'help' | 'about' | 'terms' | 'faq' | 'theme';
+type SubPage = null | 'account' | 'privacy' | 'notifications' | 'earnings' | 'darkmode' | 'quality' | 'language' | 'help' | 'about' | 'terms' | 'faq' | 'theme' | 'myclips';
 
 const CreatorDashboard = ({ onBack, profile, user }: { onBack: () => void; profile: any; user: any }) => {
   const [totalViews, setTotalViews] = useState(0);
@@ -189,11 +190,101 @@ const CreatorDashboard = ({ onBack, profile, user }: { onBack: () => void; profi
   );
 };
 
+const MyClips = ({ onBack, user }: { onBack: () => void; user: any }) => {
+  const [clips, setClips] = useState<{ id: string; title: string; party_link: string | null }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<string | null>(null);
+  const [linkInput, setLinkInput] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    if (!user) return;
+    setLoading(true);
+    const { data } = await supabase
+      .from('reels')
+      .select('id, title, party_link')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    setClips((data as any) || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
+
+  const startEdit = (id: string, current: string | null) => {
+    setEditing(id);
+    setLinkInput(current || '');
+  };
+
+  const save = async (id: string) => {
+    const value = linkInput.trim();
+    if (value && !extractYouTubeId(value)) {
+      toast.error('Paste a valid YouTube link');
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase.from('reels').update({ party_link: value || null }).eq('id', id);
+    setSaving(false);
+    if (error) { toast.error('Could not save'); return; }
+    setClips(prev => prev.map(c => c.id === id ? { ...c, party_link: value || null } : c));
+    setEditing(null);
+    toast.success(value ? 'Party link saved' : 'Party link cleared');
+  };
+
+  return (
+    <div className="min-h-screen bg-background pb-24">
+      <div className="sticky top-0 z-40 bg-card/95 backdrop-blur-md border-b border-border px-4 py-4">
+        <div className="flex items-center gap-3 max-w-lg mx-auto">
+          <Button variant="ghost" size="icon" onClick={onBack} className="rounded-full">
+            <ChevronLeft className="w-5 h-5" />
+          </Button>
+          <h1 className="text-lg font-bold text-foreground">My Clips</h1>
+        </div>
+      </div>
+      <div className="max-w-lg mx-auto p-4 space-y-3">
+        <p className="text-xs text-muted-foreground">Add or update the full-episode YouTube link viewers can open from your clip's Party icon.</p>
+        {loading ? (
+          <div className="flex justify-center py-10"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>
+        ) : clips.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-10">You haven't posted any clips yet.</p>
+        ) : (
+          clips.map(c => (
+            <div key={c.id} className="rounded-xl border border-border bg-card p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Film className="w-4 h-4 text-primary shrink-0" />
+                <p className="text-sm font-semibold truncate flex-1">{c.title}</p>
+                {c.party_link && <Tv className="w-4 h-4 text-primary" />}
+              </div>
+              {editing === c.id ? (
+                <div className="flex gap-2">
+                  <Input value={linkInput} onChange={(e) => setLinkInput(e.target.value)} placeholder="https://youtube.com/watch?v=..." className="h-9" />
+                  <Button size="sm" onClick={() => save(c.id)} disabled={saving} className="gradient-primary text-primary-foreground">
+                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>Cancel</Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-muted-foreground flex-1 truncate">{c.party_link || 'No party link set'}</p>
+                  <Button size="sm" variant="outline" onClick={() => startEdit(c.id, c.party_link)}>
+                    {c.party_link ? 'Edit' : 'Add link'}
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+      <BottomNav />
+    </div>
+  );
+};
+
 const Settings = () => {
   const navigate = useNavigate();
   const { user, profile, refreshProfile } = useAuth();
-  const { themeId, setThemeId, themes } = useColorTheme();
-  const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
+  const { themeId, setThemeId, themes, mode, setMode } = useColorTheme();
+  const darkMode = mode === 'dark';
   const [subPage, setSubPage] = useState<SubPage>(null);
 
   // Account info state
@@ -224,25 +315,7 @@ const Settings = () => {
     }
   }, [profile]);
 
-  const toggleDarkMode = (checked: boolean) => {
-    setDarkMode(checked);
-    if (checked) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  };
-
-  // Restore theme on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('theme');
-    if (saved === 'dark') {
-      document.documentElement.classList.add('dark');
-      setDarkMode(true);
-    }
-  }, []);
+  const toggleDarkMode = (checked: boolean) => setMode(checked ? 'dark' : 'light');
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -531,6 +604,10 @@ const Settings = () => {
     <CreatorDashboard onBack={() => setSubPage(null)} profile={profile} user={user} />
   );
 
+  if (subPage === 'myclips') return (
+    <MyClips onBack={() => setSubPage(null)} user={user} />
+  );
+
   // ── MAIN SETTINGS PAGE ──
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -562,6 +639,7 @@ const Settings = () => {
             <SectionLabel label="Creator" />
             <div className="rounded-2xl border border-border bg-card mx-4 overflow-hidden divide-y divide-border">
               <MenuItem icon={DollarSign} label="Creator Dashboard & Earnings" onClick={() => setSubPage('earnings')} />
+              <MenuItem icon={Film} label="My Clips (edit Watch Party link)" onClick={() => setSubPage('myclips')} />
             </div>
           </>
         )}

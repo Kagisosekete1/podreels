@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Users, Eye, Play, Plus, Globe, Lock, Tv, Loader2 } from 'lucide-react';
+import { Eye, Play, Plus, Globe, Lock, Tv, Loader2, Search } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PartyRow {
@@ -31,6 +31,7 @@ const WatchParties = () => {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [search, setSearch] = useState('');
 
   // Prefill from a reel ("watch full episode" flow)
   const prefillReel = params.get('reel');
@@ -72,6 +73,22 @@ const WatchParties = () => {
     if (!title.trim()) { toast.error('Give your party a title'); return; }
     if (!vid) { toast.error('Paste a valid YouTube link'); return; }
     setCreating(true);
+    // One host per clip: check for an existing active party on this reel.
+    if (prefillReel) {
+      const { data: existing } = await supabase
+        .from('watch_parties')
+        .select('id, host_id')
+        .eq('reel_id', prefillReel)
+        .eq('is_active', true)
+        .maybeSingle();
+      if (existing?.id) {
+        setCreating(false);
+        setOpen(false);
+        toast.info('A party is already live for this clip — joining it.');
+        navigate(`/watch-parties/${existing.id}`);
+        return;
+      }
+    }
     const { data, error } = await supabase
       .from('watch_parties')
       .insert({
@@ -84,7 +101,12 @@ const WatchParties = () => {
       .select('id')
       .single();
     if (error || !data) {
-      toast.error('Could not create party');
+      const msg = error?.message?.includes('Only the reel owner')
+        ? 'Only the reel owner can host a party for their clip.'
+        : error?.message?.includes('uniq_active_party_per_reel')
+        ? 'A party is already live for this clip.'
+        : 'Could not create party';
+      toast.error(msg);
       setCreating(false);
       return;
     }
@@ -93,6 +115,10 @@ const WatchParties = () => {
     setOpen(false);
     navigate(`/watch-parties/${data.id}`);
   };
+
+  const filteredParties = search.trim()
+    ? parties.filter(p => p.title.toLowerCase().includes(search.trim().toLowerCase()))
+    : parties;
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -136,17 +162,29 @@ const WatchParties = () => {
         </Dialog>
       </div>
 
+      <div className="p-4 pb-0">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search parties by name"
+            className="pl-9 rounded-full h-10"
+          />
+        </div>
+      </div>
+
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
-      ) : parties.length === 0 ? (
+      ) : filteredParties.length === 0 ? (
         <div className="text-center py-16 px-6">
           <Tv className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-          <p className="font-semibold">No live parties yet</p>
-          <p className="text-sm text-muted-foreground mt-1">Host one and invite your friends to watch together.</p>
+          <p className="font-semibold">{search ? 'No parties match that name' : 'No live parties yet'}</p>
+          <p className="text-sm text-muted-foreground mt-1">{search ? 'Try another search.' : 'Host one and invite your friends to watch together.'}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4">
-          {parties.map(p => (
+          {filteredParties.map(p => (
             <button
               key={p.id}
               onClick={() => navigate(`/watch-parties/${p.id}`)}

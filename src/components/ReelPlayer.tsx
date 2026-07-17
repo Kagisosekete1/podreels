@@ -270,11 +270,13 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       return;
     }
     // Only the reel owner can host a party for their clip.
-    if (isOwner) {
-      const vid = reel.party_link ? extractYouTubeId(reel.party_link) : null;
+    if (isOwner && reel.party_link) {
+      const vid = extractYouTubeId(reel.party_link);
       const qs = new URLSearchParams({ reel: reel.id, title: reel.title });
       if (vid) qs.set('video', vid);
       navigate(`/watch-parties?${qs.toString()}`);
+    } else if (isOwner) {
+      toast('Add a Watch Party link to your clip first (Settings → My Clips).');
     } else {
       toast('No hosted party right now — check again later.', {
         action: { label: 'Check again', onClick: () => handleWatchParty() },
@@ -436,7 +438,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
             <span className="text-muted-foreground text-[10px]">Reshare</span>
           </button>
 
-        {(user?.id === reel.user_id || !!reel.party_link) && (
+        {!!reel.party_link && (
           <button onClick={handleWatchParty} className="flex flex-col items-center gap-0.5">
             <Tv className="w-6 h-6 text-muted-foreground hover:text-foreground" />
             <span className="text-muted-foreground text-[10px]">Party</span>
@@ -530,7 +532,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
           <span className="text-primary-foreground text-[10px]">Reshare</span>
         </button>
 
-        {(user?.id === reel.user_id || !!reel.party_link) && (
+        {!!reel.party_link && (
           <button onClick={handleWatchParty} className="flex flex-col items-center gap-0.5">
             <Tv className="w-5 h-5 text-primary-foreground" />
             <span className="text-primary-foreground text-[10px]">Party</span>

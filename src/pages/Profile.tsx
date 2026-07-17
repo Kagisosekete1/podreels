@@ -72,6 +72,7 @@ const Profile = () => {
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [followersList, setFollowersList] = useState<any[]>([]);
   const [followingList, setFollowingList] = useState<any[]>([]);
+  const [followsMe, setFollowsMe] = useState<Set<string>>(new Set());
   const [showFollowers, setShowFollowers] = useState(false);
   const [showFollowing, setShowFollowing] = useState(false);
 
@@ -240,6 +241,7 @@ const Profile = () => {
       const ids = data.map(f => f.follower_id);
       const { data: profiles } = await supabase.from('profiles').select('username, display_name, avatar_url, user_id').in('user_id', ids);
       setFollowersList(profiles || []);
+      await loadFollowsMe(ids);
     } else {
       setFollowersList([]);
     }
@@ -254,11 +256,23 @@ const Profile = () => {
       const ids = data.map(f => f.following_id);
       const { data: profiles } = await supabase.from('profiles').select('username, display_name, avatar_url, user_id').in('user_id', ids);
       setFollowingList(profiles || []);
+      await loadFollowsMe(ids);
     } else {
       setFollowingList([]);
     }
     setShowFollowing(true);
     setShowFollowers(false);
+  };
+
+  // For the current viewer, compute which of the listed users follow *them*.
+  const loadFollowsMe = async (userIds: string[]) => {
+    if (!user || userIds.length === 0) { setFollowsMe(new Set()); return; }
+    const { data } = await supabase
+      .from('follows')
+      .select('follower_id')
+      .eq('following_id', user.id)
+      .in('follower_id', userIds);
+    setFollowsMe(new Set((data || []).map(r => r.follower_id)));
   };
 
   if (loading) {
@@ -340,9 +354,14 @@ const Profile = () => {
                 <AvatarImage src={p.avatar_url || undefined} className="object-cover" />
                 <AvatarFallback className="gradient-primary text-primary-foreground text-sm font-bold">{p.username[0]?.toUpperCase()}</AvatarFallback>
               </Avatar>
-              <div className="text-left">
+              <div className="text-left flex-1">
                 <p className="text-sm font-medium">{p.display_name || p.username}</p>
-                <p className="text-xs text-muted-foreground">@{p.username}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs text-muted-foreground">@{p.username}</p>
+                  {user && p.user_id !== user.id && followsMe.has(p.user_id) && (
+                    <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-muted text-muted-foreground">Follows you</span>
+                  )}
+                </div>
               </div>
             </button>
           ))}
