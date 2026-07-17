@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, User, Lock, Bell, DollarSign, Moon, Sun, Wifi, Globe, HelpCircle, Info, Shield, LogOut, ChevronRight, ChevronLeft, X, Settings as SettingsIcon, Check, Eye, Heart, Users, TrendingUp, BarChart3, Palette, MessageCircleQuestion } from 'lucide-react';
+import { ArrowLeft, User, Lock, Bell, DollarSign, Moon, Sun, Wifi, Globe, HelpCircle, Info, Shield, LogOut, ChevronRight, ChevronLeft, X, Settings as SettingsIcon, Check, Eye, Heart, Users, TrendingUp, BarChart3, Palette, MessageCircleQuestion, Tv, Film, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -14,10 +14,11 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, 
 import Markdown from '@/components/Markdown';
 import { ABOUT_MD, TERMS_MD, HELP_MD, FAQ_MD } from '@/lib/legal';
 import { useColorTheme } from '@/contexts/ThemeContext';
+import { extractYouTubeId } from '@/lib/youtube';
 
 import { Coffee } from 'lucide-react';
 
-type SubPage = null | 'account' | 'privacy' | 'notifications' | 'earnings' | 'darkmode' | 'quality' | 'language' | 'help' | 'about' | 'terms' | 'faq' | 'theme';
+type SubPage = null | 'account' | 'privacy' | 'notifications' | 'earnings' | 'darkmode' | 'quality' | 'language' | 'help' | 'about' | 'terms' | 'faq' | 'theme' | 'myclips';
 
 const CreatorDashboard = ({ onBack, profile, user }: { onBack: () => void; profile: any; user: any }) => {
   const [totalViews, setTotalViews] = useState(0);
@@ -192,8 +193,8 @@ const CreatorDashboard = ({ onBack, profile, user }: { onBack: () => void; profi
 const Settings = () => {
   const navigate = useNavigate();
   const { user, profile, refreshProfile } = useAuth();
-  const { themeId, setThemeId, themes } = useColorTheme();
-  const [darkMode, setDarkMode] = useState(() => document.documentElement.classList.contains('dark'));
+  const { themeId, setThemeId, themes, mode, setMode } = useColorTheme();
+  const darkMode = mode === 'dark';
   const [subPage, setSubPage] = useState<SubPage>(null);
 
   // Account info state
@@ -224,25 +225,7 @@ const Settings = () => {
     }
   }, [profile]);
 
-  const toggleDarkMode = (checked: boolean) => {
-    setDarkMode(checked);
-    if (checked) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  };
-
-  // Restore theme on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('theme');
-    if (saved === 'dark') {
-      document.documentElement.classList.add('dark');
-      setDarkMode(true);
-    }
-  }, []);
+  const toggleDarkMode = (checked: boolean) => setMode(checked ? 'dark' : 'light');
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -531,6 +514,10 @@ const Settings = () => {
     <CreatorDashboard onBack={() => setSubPage(null)} profile={profile} user={user} />
   );
 
+  if (subPage === 'myclips') return (
+    <MyClips onBack={() => setSubPage(null)} user={user} />
+  );
+
   // ── MAIN SETTINGS PAGE ──
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -562,6 +549,7 @@ const Settings = () => {
             <SectionLabel label="Creator" />
             <div className="rounded-2xl border border-border bg-card mx-4 overflow-hidden divide-y divide-border">
               <MenuItem icon={DollarSign} label="Creator Dashboard & Earnings" onClick={() => setSubPage('earnings')} />
+              <MenuItem icon={Film} label="My Clips (edit Watch Party link)" onClick={() => setSubPage('myclips')} />
             </div>
           </>
         )}
