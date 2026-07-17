@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 
 export type ThemeId = 'coral' | 'ocean' | 'violet' | 'forest' | 'sunset';
+export type ThemeMode = 'light' | 'dark';
 
 export interface ThemePalette {
   id: ThemeId;
@@ -51,6 +52,7 @@ export const THEMES: ThemePalette[] = [
 ];
 
 const STORAGE_KEY = 'color-theme';
+const MODE_KEY = 'theme-mode';
 
 const applyTheme = (theme: ThemePalette) => {
   const root = document.documentElement;
@@ -61,10 +63,18 @@ const applyTheme = (theme: ThemePalette) => {
   root.style.setProperty('--sidebar-ring', theme.primary);
 };
 
+const applyMode = (mode: ThemeMode) => {
+  const root = document.documentElement;
+  if (mode === 'dark') root.classList.add('dark');
+  else root.classList.remove('dark');
+};
+
 interface ThemeContextValue {
   themeId: ThemeId;
   setThemeId: (id: ThemeId) => void;
   themes: ThemePalette[];
+  mode: ThemeMode;
+  setMode: (m: ThemeMode) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -74,19 +84,32 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
     const saved = localStorage.getItem(STORAGE_KEY) as ThemeId | null;
     return saved && THEMES.some(t => t.id === saved) ? saved : 'coral';
   });
+  const [mode, setModeState] = useState<ThemeMode>(() => {
+    const saved = localStorage.getItem(MODE_KEY) as ThemeMode | null;
+    return saved === 'dark' ? 'dark' : 'light';
+  });
 
   useEffect(() => {
     const theme = THEMES.find(t => t.id === themeId) ?? THEMES[0];
     applyTheme(theme);
   }, [themeId]);
 
+  useEffect(() => {
+    applyMode(mode);
+  }, [mode]);
+
   const setThemeId = (id: ThemeId) => {
     setThemeIdState(id);
     localStorage.setItem(STORAGE_KEY, id);
   };
 
+  const setMode = (m: ThemeMode) => {
+    setModeState(m);
+    localStorage.setItem(MODE_KEY, m);
+  };
+
   return (
-    <ThemeContext.Provider value={{ themeId, setThemeId, themes: THEMES }}>
+    <ThemeContext.Provider value={{ themeId, setThemeId, themes: THEMES, mode, setMode }}>
       {children}
     </ThemeContext.Provider>
   );
