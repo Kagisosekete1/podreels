@@ -191,6 +191,7 @@ const CreatorDashboard = ({ onBack, profile, user }: { onBack: () => void; profi
 };
 
 const Settings = () => {
+  // (component body below)
   const navigate = useNavigate();
   const { user, profile, refreshProfile } = useAuth();
   const { themeId, setThemeId, themes, mode, setMode } = useColorTheme();
