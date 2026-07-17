@@ -438,7 +438,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
             <span className="text-muted-foreground text-[10px]">Reshare</span>
           </button>
 
-        {(user?.id === reel.user_id || !!reel.party_link) && (
+        {!!reel.party_link && (
           <button onClick={handleWatchParty} className="flex flex-col items-center gap-0.5">
             <Tv className="w-6 h-6 text-muted-foreground hover:text-foreground" />
             <span className="text-muted-foreground text-[10px]">Party</span>
@@ -532,7 +532,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
           <span className="text-primary-foreground text-[10px]">Reshare</span>
         </button>
 
-        {(user?.id === reel.user_id || !!reel.party_link) && (
+        {!!reel.party_link && (
           <button onClick={handleWatchParty} className="flex flex-col items-center gap-0.5">
             <Tv className="w-5 h-5 text-primary-foreground" />
             <span className="text-primary-foreground text-[10px]">Party</span>

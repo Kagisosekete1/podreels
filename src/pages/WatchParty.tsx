@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { extractYouTubeId, youTubeThumb } from '@/lib/youtube';
+import { extractYouTubeId } from '@/lib/youtube';
 import YouTubePlayer, { YouTubePlayerHandle } from '@/components/YouTubePlayer';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
