@@ -7,12 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Upload as UploadIcon, Loader2, Film, ImagePlus, Clapperboard, Tag, Type, AlignLeft, Sparkles, Tv } from 'lucide-react';
+import { ArrowLeft, Upload as UploadIcon, Loader2, Film, ImagePlus, Clapperboard, Tag, Type, Hash, Sparkles, Tv, Plus, X } from 'lucide-react';
 import { extractYouTubeId } from '@/lib/youtube';
 import { useToast } from '@/hooks/use-toast';
 import BottomNav from '@/components/BottomNav';
 
-const CATEGORIES = ['Comedy', 'True Crime', 'Tech', 'Business', 'Health', 'Education', 'News', 'Sports', 'Music', 'Lifestyle', 'Science', 'Other', 'General', 'CRIME'];
+const CATEGORIES = ['Comedy', 'True Crime', 'Tech', 'Business', 'Health', 'Motivation', 'Education', 'News', 'Sports', 'Music', 'Lifestyle', 'Science', 'Other', 'General', 'CRIME'];
+
+const PRESET_HASHTAGS = ['clpped', 'podcast', 'fyp', 'fypppppppppp', 'foryou', 'trendingclpped', 'trending'];
+
+const normalizeTag = (raw: string) =>
+  raw.trim().toLowerCase().replace(/^#+/, '').replace(/[^a-z0-9_]/g, '').slice(0, 40);
 
 const Upload = () => {
   const navigate = useNavigate();
@@ -26,12 +31,26 @@ const Upload = () => {
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
   const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [hashtags, setHashtags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
   const [category, setCategory] = useState('');
   const [partyLink, setPartyLink] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
-  const wordCount = description.trim() ? description.trim().split(/\s+/).filter(Boolean).length : 0;
+  const addTag = (raw: string) => {
+    const t = normalizeTag(raw);
+    if (!t) return;
+    if (hashtags.includes(t)) return;
+    if (hashtags.length >= 10) {
+      toast({ title: 'Max 10 hashtags', variant: 'destructive' });
+      return;
+    }
+    setHashtags([...hashtags, t]);
+    setTagInput('');
+  };
+
+  const removeTag = (t: string) => setHashtags(hashtags.filter((h) => h !== t));
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -64,13 +83,6 @@ const Upload = () => {
     setThumbnailPreview(URL.createObjectURL(f));
   };
 
-  // Extract hashtags from description
-  const extractHashtags = (text: string): string[] => {
-    const matches = text.match(/#(\w+)/g);
-    if (!matches) return [];
-    return [...new Set(matches.map(m => m.slice(1).toLowerCase()))].slice(0, 10);
-  };
-
   const handleUpload = async () => {
     if (!file || !user || !title.trim()) {
       toast({ title: 'Please fill in required fields', variant: 'destructive' });
@@ -84,15 +96,35 @@ const Upload = () => {
     }
 
     setUploading(true);
+    setUploadProgress(0);
     try {
       const ext = file.name.split('.').pop();
       const filePath = `${user.id}/${Date.now()}.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
+      // Signed upload URL so we can track progress via XHR
+      const { data: signed, error: signErr } = await supabase.storage
         .from('reels')
-        .upload(filePath, file, { contentType: file.type });
+        .createSignedUploadUrl(filePath);
+      if (signErr || !signed) throw signErr || new Error('Failed to prepare upload');
 
-      if (uploadError) throw uploadError;
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', signed.signedUrl, true);
+        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        xhr.setRequestHeader('x-upsert', 'true');
+        xhr.upload.onprogress = (ev) => {
+          if (ev.lengthComputable) {
+            setUploadProgress(Math.round((ev.loaded / ev.total) * 100));
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`Upload failed (${xhr.status})`));
+        };
+        xhr.onerror = () => reject(new Error('Network error during upload'));
+        xhr.send(file);
+      });
+      setUploadProgress(100);
 
       const { data: urlData } = supabase.storage.from('reels').getPublicUrl(filePath);
 
@@ -124,12 +156,12 @@ const Upload = () => {
       const { error: insertError } = await supabase.from('reels').insert({
         user_id: user.id,
         title: title.trim(),
-        description: description.trim() || null,
+        description: hashtags.length ? hashtags.map((h) => `#${h}`).join(' ') : null,
         video_url: urlData.publicUrl,
         thumbnail_url: thumbnailUrl,
         category: category.trim() || 'General',
         duration_seconds: duration,
-        hashtags: hashtags.length > 0 ? hashtags : [],
+        hashtags,
         party_link: trimmedPartyLink || null,
       });
 
@@ -141,6 +173,7 @@ const Upload = () => {
       toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -211,19 +244,77 @@ const Upload = () => {
           </div>
 
           <div>
-            <Label htmlFor="description" className="flex items-center gap-1.5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <AlignLeft className="w-3.5 h-3.5" /> Description
+            <Label htmlFor="hashtag" className="flex items-center gap-1.5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <Hash className="w-3.5 h-3.5" /> Hashtags <span className="font-normal normal-case tracking-normal text-muted-foreground/70">({hashtags.length}/10)</span>
             </Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Write about your clip... Add #hashtags inline like #podcast #comedy"
-              rows={5}
-              maxLength={2000}
-              className="rounded-xl resize-none"
-            />
-            <p className="text-[11px] mt-1.5 text-muted-foreground">{wordCount} words · add #hashtags inline</p>
+            <div className="flex gap-2">
+              <Input
+                id="hashtag"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ',' || e.key === ' ') {
+                    e.preventDefault();
+                    addTag(tagInput);
+                  } else if (e.key === 'Backspace' && !tagInput && hashtags.length) {
+                    removeTag(hashtags[hashtags.length - 1]);
+                  }
+                }}
+                placeholder="Type a hashtag and press Enter"
+                className="rounded-xl"
+                disabled={hashtags.length >= 10}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="rounded-xl shrink-0"
+                onClick={() => addTag(tagInput)}
+                disabled={!tagInput.trim() || hashtags.length >= 10}
+                aria-label="Add hashtag"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {hashtags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-3">
+                {hashtags.map((t) => (
+                  <span key={t} className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-xs font-semibold pl-2.5 pr-1 py-1">
+                    #{t}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(t)}
+                      className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-primary/20"
+                      aria-label={`Remove ${t}`}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <p className="text-[11px] mt-3 mb-1.5 text-muted-foreground">Quick add:</p>
+            <div className="flex flex-wrap gap-1.5">
+              {PRESET_HASHTAGS.map((t) => {
+                const active = hashtags.includes(t);
+                return (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => (active ? removeTag(t) : addTag(t))}
+                    className={`text-xs font-medium rounded-full px-2.5 py-1 border transition-colors ${
+                      active
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'border-border text-hashtag hover:bg-muted'
+                    }`}
+                  >
+                    #{t}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           <div>
@@ -285,8 +376,17 @@ const Upload = () => {
           className="w-full h-12 rounded-2xl gradient-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
         >
           {uploading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <UploadIcon className="w-5 h-5 mr-2" />}
-          {uploading ? 'Uploading...' : 'Post Clip'}
+          {uploading ? `Uploading… ${uploadProgress}%` : 'Post Clip'}
         </Button>
+
+        {uploading && (
+          <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full gradient-primary transition-all duration-150"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+        )}
       </div>
 
       <BottomNav />
