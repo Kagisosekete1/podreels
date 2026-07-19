@@ -380,7 +380,7 @@ const Profile = () => {
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-border">
         <div className="flex items-center justify-between h-14 px-4">
           <button onClick={() => navigate(-1)}><ArrowLeft className="w-6 h-6" /></button>
-          <h1 className="text-lg font-bold">@{profileData.username}</h1>
+          <h1 className="text-lg font-bold flex items-center gap-1">@{profileData.username}{profileData.is_verified && <VerifiedBadge size={16} />}</h1>
           <div className="w-5" />
         </div>
       </header>
@@ -443,8 +443,9 @@ const Profile = () => {
             </div>
           ) : (
             <>
-              <h2 className="font-bold text-lg flex items-center gap-2">
+              <h2 className="font-bold text-lg flex items-center gap-1.5">
                 {profileData.display_name || profileData.username}
+                {profileData.is_verified && <VerifiedBadge size={18} />}
               </h2>
               {profileData.bio && <p className="text-sm text-muted-foreground mt-1">{profileData.bio}</p>}
             </>
