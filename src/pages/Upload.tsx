@@ -151,8 +151,6 @@ const Upload = () => {
         }
       }
 
-      const hashtags = extractHashtags(description);
-
       const { error: insertError } = await supabase.from('reels').insert({
         user_id: user.id,
         title: title.trim(),
