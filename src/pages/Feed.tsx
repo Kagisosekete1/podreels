@@ -204,8 +204,16 @@ const Feed = () => {
 
   return (
     <div className="h-screen flex flex-col bg-background">
-      <div className="absolute top-0 left-0 right-0 z-30 px-4 pt-4 pb-2">
-        <span className="text-primary-foreground font-black text-lg drop-shadow-lg" style={{ opacity: 0.4 }}>Clpped</span>
+      <div
+        className="absolute top-0 left-0 right-0 z-30 px-4 pb-2 flex items-center gap-2"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 14px)' }}
+      >
+        <img
+          src="/logo.png"
+          alt="Clpped"
+          className="w-8 h-8 rounded-xl ring-1 ring-white/30 shadow-md object-cover"
+        />
+        <span className="text-white font-black text-lg drop-shadow-lg tracking-tight">Clpped</span>
       </div>
       <div
         ref={containerRef}
