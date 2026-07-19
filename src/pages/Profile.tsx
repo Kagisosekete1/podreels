@@ -9,6 +9,7 @@ import { ArrowLeft, Grid3X3, Bookmark, AtSign, Loader2, Camera, Check, X, Settin
 import { toast } from 'sonner';
 import BottomNav from '@/components/BottomNav';
 import Cropper from 'react-easy-crop';
+import VerifiedBadge from '@/components/VerifiedBadge';
 
 interface ProfileData {
   id: string;
@@ -20,6 +21,7 @@ interface ProfileData {
   is_podcaster: boolean;
   followers_count: number;
   following_count: number;
+  is_verified?: boolean;
 }
 
 interface ReelThumb {

@@ -1,0 +1,2 @@
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_verified boolean NOT NULL DEFAULT false;
+UPDATE public.profiles SET is_verified = true WHERE user_id IN (SELECT id FROM auth.users WHERE lower(email) = 'molaxkagiso@gmail.com');

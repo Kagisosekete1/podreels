@@ -46,7 +46,6 @@ const BottomNav = () => {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
-      <div className="h-6 bg-gradient-to-t from-black/70 to-transparent" />
       <div className="px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pointer-events-auto">
         <nav className="relative flex items-stretch justify-between px-2.5 h-[62px] bg-card/80 backdrop-blur-2xl border border-black/40 rounded-[26px] shadow-[0_8px_30px_-8px_hsl(var(--foreground)/0.25)]">
           {items.map((item) => {
