@@ -305,6 +305,7 @@ export type Database = {
           following_count: number
           id: string
           is_podcaster: boolean
+          is_verified: boolean
           updated_at: string
           user_id: string
           username: string
@@ -318,6 +319,7 @@ export type Database = {
           following_count?: number
           id?: string
           is_podcaster?: boolean
+          is_verified?: boolean
           updated_at?: string
           user_id: string
           username: string
@@ -331,6 +333,7 @@ export type Database = {
           following_count?: number
           id?: string
           is_podcaster?: boolean
+          is_verified?: boolean
           updated_at?: string
           user_id?: string
           username?: string
