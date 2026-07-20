@@ -54,7 +54,7 @@ const Feed = () => {
   const fetchReels = useCallback(async () => {
     const { data, error } = await supabase
       .from('reels')
-      .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster)')
+      .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster, is_verified)')
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -70,7 +70,7 @@ const Feed = () => {
           // Target wasn't in the first page — fetch it directly and prepend
           const { data: extra } = await supabase
             .from('reels')
-            .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster)')
+            .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster, is_verified)')
             .eq('id', targetReelId)
             .maybeSingle();
           if (extra) {
