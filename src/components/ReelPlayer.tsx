@@ -367,8 +367,9 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
 
           <div className="absolute bottom-4 left-3 right-3 z-20">
             <div className="flex items-center gap-1.5 mb-1.5">
-              <button onClick={() => navigate(`/profile/${reel.profiles.username}`)}>
+              <button onClick={() => navigate(`/profile/${reel.profiles.username}`)} className="flex items-center gap-1">
                 <span className="text-white font-semibold text-xs">@{reel.profiles.username}</span>
+                {reel.profiles.is_verified && <VerifiedBadge size={12} />}
               </button>
               {user && user.id !== reel.user_id && (
                 <button
@@ -552,8 +553,9 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       {/* Bottom info */}
       <div className="absolute bottom-20 left-3 right-14 z-20">
         <div className="flex items-center gap-1.5 mb-1.5">
-          <button onClick={() => navigate(`/profile/${reel.profiles.username}`)}>
+          <button onClick={() => navigate(`/profile/${reel.profiles.username}`)} className="flex items-center gap-1">
             <span className="text-primary-foreground font-semibold text-xs">@{reel.profiles.username}</span>
+            {reel.profiles.is_verified && <VerifiedBadge size={12} />}
           </button>
           {user && user.id !== reel.user_id && (
             <button
