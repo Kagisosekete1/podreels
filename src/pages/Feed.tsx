@@ -54,7 +54,7 @@ const Feed = () => {
   const fetchReels = useCallback(async () => {
     const { data, error } = await supabase
       .from('reels')
-      .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster)')
+      .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster, is_verified)')
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -70,7 +70,7 @@ const Feed = () => {
           // Target wasn't in the first page — fetch it directly and prepend
           const { data: extra } = await supabase
             .from('reels')
-            .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster)')
+            .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster, is_verified)')
             .eq('id', targetReelId)
             .maybeSingle();
           if (extra) {
@@ -100,8 +100,15 @@ const Feed = () => {
     fetchReels();
     const channel = supabase
       .channel('reels-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reels' }, () => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reels' }, () => {
+        // Only refetch when a brand-new reel is added. UPDATE events (like/comment
+        // count changes) are handled inline by ReelPlayer's per-reel subscription,
+        // so we must NOT refetch/reshuffle here — that resets the currently playing video.
         fetchReels();
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'reels' }, (payload) => {
+        const deletedId = (payload.old as any)?.id;
+        if (deletedId) setReels(prev => prev.filter(r => r.id !== deletedId));
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };

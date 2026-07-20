@@ -51,7 +51,7 @@ const ProfileFeed = () => {
 
       const { data } = await supabase
         .from('reels')
-        .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster)')
+        .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster, is_verified)')
         .eq('user_id', profile.user_id)
         .order('created_at', { ascending: false });
 

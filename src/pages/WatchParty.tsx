@@ -48,6 +48,7 @@ const WatchParty = () => {
   const [floaters, setFloaters] = useState<Floating[]>([]);
   const [playerReady, setPlayerReady] = useState(false);
   const [viewerStarted, setViewerStarted] = useState(false);
+  const [liveViewers, setLiveViewers] = useState(0);
 
   const applyingRemote = useRef(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -124,6 +125,20 @@ const WatchParty = () => {
     return () => { supabase.removeChannel(channel); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // Live viewer presence: counts everyone currently on this party page in real time.
+  useEffect(() => {
+    if (!id) return;
+    const key = user?.id || `guest-${Math.random().toString(36).slice(2)}`;
+    const ch = supabase.channel(`party-presence-${id}`, { config: { presence: { key } } });
+    ch.on('presence', { event: 'sync' }, () => {
+      const state = ch.presenceState();
+      setLiveViewers(Object.keys(state).length);
+    }).subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') await ch.track({ online_at: new Date().toISOString() });
+    });
+    return () => { supabase.removeChannel(ch); };
+  }, [id, user?.id]);
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -239,8 +254,11 @@ const WatchParty = () => {
             {party.is_public ? <Globe className="w-3 h-3" /> : <Lock className="w-3 h-3" />}
           </p>
         </div>
-        <span className="flex items-center gap-1 text-xs text-muted-foreground"><Users className="w-3.5 h-3.5" /> {memberCount}</span>
-        <span className="flex items-center gap-1 text-xs text-muted-foreground"><Eye className="w-3.5 h-3.5" /> {party.views_count}</span>
+        <span className="flex items-center gap-1 text-xs text-muted-foreground" title="Members joined"><Users className="w-3.5 h-3.5" /> {memberCount}</span>
+        <span className="flex items-center gap-1 text-xs text-emerald-500" title="Watching now">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> {liveViewers} live
+        </span>
+        <span className="flex items-center gap-1 text-xs text-muted-foreground" title="Total views"><Eye className="w-3.5 h-3.5" /> {party.views_count}</span>
         {isHost && (
           <button onClick={sharePartyLink} className="p-1.5 rounded-full hover:bg-secondary"><Share2 className="w-4 h-4" /></button>
         )}
