@@ -4,6 +4,7 @@ import { Heart, MessageCircle, Share2, Play, Bookmark, Send, Trash2, Tv } from '
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import CommentsSheet from '@/components/CommentsSheet';
 import AdOverlay from '@/components/AdOverlay';
+import VerifiedBadge from '@/components/VerifiedBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -30,6 +31,7 @@ interface ReelPlayerProps {
       display_name: string | null;
       avatar_url: string | null;
       is_podcaster: boolean;
+      is_verified?: boolean;
     };
   };
   isActive: boolean;
