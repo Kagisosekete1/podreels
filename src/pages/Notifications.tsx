@@ -308,27 +308,77 @@ const Notifications = () => {
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {chatMessages.map(m => (
             <div key={m.id} className={`flex ${m.sender_id === user.id ? 'justify-end' : 'justify-start'} group`}>
-              <div
-                className={`max-w-[70%] px-3 py-2 rounded-2xl text-sm relative ${m.sender_id === user.id ? 'gradient-primary text-primary-foreground' : 'bg-muted text-foreground'}`}
-              >
-                {m.content}
-                <p className={`text-[9px] mt-0.5 ${m.sender_id === user.id ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
-                  {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
-                </p>
-                <button
-                  onClick={() => { if (confirm('Delete this message for everyone?')) deleteMessage(m.id); }}
-                  className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] items-center justify-center hidden group-hover:flex"
+              <div className="max-w-[75%] relative">
+                <div
+                  onDoubleClick={() => setReactingTo(m.id)}
+                  className={`px-3 py-2 rounded-2xl text-sm relative ${m.sender_id === user.id ? 'gradient-primary text-primary-foreground' : 'bg-muted text-foreground'}`}
                 >
-                  ×
-                </button>
+                  {m.media_url && signedUrls[m.id] && (
+                    m.media_type === 'video' ? (
+                      <video src={signedUrls[m.id]} controls playsInline className="rounded-lg max-h-64 mb-1" />
+                    ) : (
+                      <a href={signedUrls[m.id]} target="_blank" rel="noreferrer">
+                        <img src={signedUrls[m.id]} alt="attachment" className="rounded-lg max-h-64 mb-1 object-cover" />
+                      </a>
+                    )
+                  )}
+                  {m.content && <p className="whitespace-pre-wrap break-words">{m.content}</p>}
+                  <p className={`text-[9px] mt-0.5 ${m.sender_id === user.id ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
+                    {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
+                  </p>
+                  <button
+                    onClick={() => setReactingTo(reactingTo === m.id ? null : m.id)}
+                    className={`absolute -bottom-2 ${m.sender_id === user.id ? '-left-2' : '-right-2'} w-6 h-6 rounded-full bg-background border border-border items-center justify-center text-xs hidden group-hover:flex`}
+                    aria-label="React"
+                  ><Smile className="w-3 h-3" /></button>
+                  <button
+                    onClick={() => { if (confirm('Delete this message for everyone?')) deleteMessage(m.id); }}
+                    className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] items-center justify-center hidden group-hover:flex"
+                  >×</button>
+                </div>
+                {/* Reactions row */}
+                {reactions.filter(r => r.message_id === m.id).length > 0 && (
+                  <div className={`flex gap-1 mt-1 flex-wrap ${m.sender_id === user.id ? 'justify-end' : 'justify-start'}`}>
+                    {Object.entries(reactions.filter(r => r.message_id === m.id).reduce<Record<string, number>>((acc, r) => { acc[r.emoji] = (acc[r.emoji] || 0) + 1; return acc; }, {})).map(([e, c]) => (
+                      <button key={e} onClick={() => toggleReaction(m.id, e)} className="text-xs bg-muted border border-border rounded-full px-1.5 py-0.5">{e} {c > 1 ? c : ''}</button>
+                    ))}
+                  </div>
+                )}
+                {reactingTo === m.id && (
+                  <div className={`absolute z-10 -top-10 ${m.sender_id === user.id ? 'right-0' : 'left-0'} bg-background border border-border rounded-full shadow-lg px-2 py-1 flex gap-1`}>
+                    {REACTION_EMOJIS.map(e => (
+                      <button key={e} onClick={() => toggleReaction(m.id, e)} className="text-lg hover:scale-125 transition-transform">{e}</button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}
         </div>
+        {!chatAccepted && chatMessages.some(m => m.sender_id === activeChat) && (
+          <div className="sticky bottom-32 mx-4 mb-2 p-3 rounded-xl border border-border bg-muted/50 text-xs">
+            <p className="mb-2">This user isn't in your inbox yet. Accept the request to reply.</p>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={acceptConversation} className="gradient-primary text-primary-foreground">Accept</Button>
+              <Button size="sm" variant="outline" onClick={() => setActiveChat(null)}>Not now</Button>
+            </div>
+          </div>
+        )}
         <div className="sticky bottom-20 px-4 py-2 bg-background border-t border-border">
+          {mediaFile && (
+            <div className="mb-2 flex items-center gap-2 text-xs bg-muted rounded-lg px-2 py-1">
+              {mediaFile.type.startsWith('video') ? <Play className="w-3 h-3" /> : <Paperclip className="w-3 h-3" />}
+              <span className="truncate flex-1">{mediaFile.name}</span>
+              <button onClick={() => setMediaFile(null)}><X className="w-3 h-3" /></button>
+            </div>
+          )}
           <div className="flex gap-2">
-            <Input value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type a message..." onKeyDown={e => e.key === 'Enter' && sendMessage()} />
-            <Button onClick={sendMessage} disabled={sendingMessage || !newMessage.trim()} size="icon" className="gradient-primary">
+            <label className="flex items-center justify-center w-10 h-10 rounded-md border border-border cursor-pointer hover:bg-muted" aria-label="Attach media">
+              <Paperclip className="w-4 h-4" />
+              <input type="file" accept="image/*,video/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setMediaFile(f); }} />
+            </label>
+            <Input value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder={chatAccepted ? 'Type a message...' : 'Send a message request...'} onKeyDown={e => e.key === 'Enter' && sendMessage()} />
+            <Button onClick={sendMessage} disabled={sendingMessage || uploadingMedia || (!newMessage.trim() && !mediaFile)} size="icon" className="gradient-primary">
               <Send className="w-4 h-4 text-primary-foreground" />
             </Button>
           </div>
