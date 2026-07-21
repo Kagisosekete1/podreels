@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, UserPlus, Bell, Loader2, Mail, Send, Search, ArrowLeft } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, Bell, Loader2, Mail, Send, Search, ArrowLeft, Paperclip, Smile, X, Play } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import BottomNav from '@/components/BottomNav';
@@ -28,6 +28,8 @@ interface Message {
   content: string;
   read: boolean;
   created_at: string;
+  media_url?: string | null;
+  media_type?: string | null;
 }
 
 interface Conversation {
@@ -37,7 +39,12 @@ interface Conversation {
   lastMessage: string;
   lastTime: string;
   unread: number;
+  accepted: boolean;
 }
+
+interface Reaction { id: string; message_id: string; user_id: string; emoji: string; }
+
+const REACTION_EMOJIS = ['❤️', '😂', '😮', '😢', '👍', '🔥'];
 
 const Notifications = () => {
   const navigate = useNavigate();
@@ -46,9 +53,16 @@ const Notifications = () => {
   const [tab, setTab] = useState<'alerts' | 'inbox'>('alerts');
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [inboxTab, setInboxTab] = useState<'messages' | 'requests'>('messages');
   const [loading, setLoading] = useState(true);
   const [activeChat, setActiveChat] = useState<string | null>(null);
+  const [chatAccepted, setChatAccepted] = useState(true);
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
+  const [reactions, setReactions] = useState<Reaction[]>([]);
+  const [reactingTo, setReactingTo] = useState<string | null>(null);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [chatProfile, setChatProfile] = useState<{ username: string; avatar_url: string | null } | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
