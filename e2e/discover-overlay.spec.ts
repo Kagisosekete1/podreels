@@ -125,9 +125,8 @@ test.describe('Discover overlay — tap to play & mute toggle', () => {
  *    the UI button label updates accordingly.
  */
 test.describe('Discover overlay — iPhone 13 mobile checks', () => {
-  test.skip(({ browserName }, testInfo) => testInfo.project.name !== 'mobile-safari', 'Mobile-only');
-
-  test('autoplays muted, tap toggles play/pause, unmute works on a real tap', async ({ page }) => {
+  test('autoplays muted, tap toggles play/pause, unmute works on a real tap', async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name !== 'mobile-safari', 'Mobile-only');
     await openFirstReel(page);
 
     // Mobile must start muted so iOS allows autoplay.
