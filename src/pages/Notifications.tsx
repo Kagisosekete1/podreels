@@ -117,9 +117,18 @@ const Notifications = () => {
       const { data: profiles } = await supabase.from('profiles').select('user_id, username, avatar_url').in('user_id', userIds);
       const profileMap: Record<string, { username: string; avatar_url: string | null }> = {};
       profiles?.forEach(p => { profileMap[p.user_id] = { username: p.username, avatar_url: p.avatar_url }; });
+      // Determine acceptance: mutual follow OR explicit accept in conversation_state OR I've replied.
+      const { data: myFollowing } = await supabase.from('follows').select('following_id').eq('follower_id', user.id).in('following_id', userIds);
+      const { data: followersOfMe } = await supabase.from('follows').select('follower_id').eq('following_id', user.id).in('follower_id', userIds);
+      const { data: states } = await supabase.from('conversation_state').select('other_id, accepted').eq('owner_id', user.id).in('other_id', userIds);
+      const iFollow = new Set((myFollowing || []).map(f => f.following_id));
+      const followsMe = new Set((followersOfMe || []).map(f => f.follower_id));
+      const acceptedMap = new Map((states || []).map(s => [s.other_id, s.accepted] as const));
       const convs: Conversation[] = userIds.map(uid => {
+        const iReplied = convMap[uid].messages.some(m => m.sender_id === user.id);
+        const accepted = acceptedMap.get(uid) === true || (iFollow.has(uid) && followsMe.has(uid)) || iReplied;
         const latest = convMap[uid].messages[0];
-        return { user_id: uid, username: profileMap[uid]?.username || 'Unknown', avatar_url: profileMap[uid]?.avatar_url || null, lastMessage: latest.content, lastTime: latest.created_at, unread: convMap[uid].unread };
+        return { user_id: uid, username: profileMap[uid]?.username || 'Unknown', avatar_url: profileMap[uid]?.avatar_url || null, lastMessage: latest.content || (latest.media_type ? '📎 Attachment' : ''), lastTime: latest.created_at, unread: convMap[uid].unread, accepted };
       }).sort((a, b) => new Date(b.lastTime).getTime() - new Date(a.lastTime).getTime());
       setConversations(convs);
       setLoading(false);
