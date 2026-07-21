@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, UserPlus, Bell, Loader2, Mail, Send, Search, ArrowLeft } from 'lucide-react';
+import { Heart, MessageCircle, UserPlus, Bell, Loader2, Mail, Send, Search, ArrowLeft, Paperclip, Smile, X, Play } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
 import BottomNav from '@/components/BottomNav';
@@ -28,6 +28,8 @@ interface Message {
   content: string;
   read: boolean;
   created_at: string;
+  media_url?: string | null;
+  media_type?: string | null;
 }
 
 interface Conversation {
@@ -37,7 +39,12 @@ interface Conversation {
   lastMessage: string;
   lastTime: string;
   unread: number;
+  accepted: boolean;
 }
+
+interface Reaction { id: string; message_id: string; user_id: string; emoji: string; }
+
+const REACTION_EMOJIS = ['❤️', '😂', '😮', '😢', '👍', '🔥'];
 
 const Notifications = () => {
   const navigate = useNavigate();
@@ -46,9 +53,16 @@ const Notifications = () => {
   const [tab, setTab] = useState<'alerts' | 'inbox'>('alerts');
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [inboxTab, setInboxTab] = useState<'messages' | 'requests'>('messages');
   const [loading, setLoading] = useState(true);
   const [activeChat, setActiveChat] = useState<string | null>(null);
+  const [chatAccepted, setChatAccepted] = useState(true);
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
+  const [reactions, setReactions] = useState<Reaction[]>([]);
+  const [reactingTo, setReactingTo] = useState<string | null>(null);
+  const [mediaFile, setMediaFile] = useState<File | null>(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [chatProfile, setChatProfile] = useState<{ username: string; avatar_url: string | null } | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
@@ -103,9 +117,18 @@ const Notifications = () => {
       const { data: profiles } = await supabase.from('profiles').select('user_id, username, avatar_url').in('user_id', userIds);
       const profileMap: Record<string, { username: string; avatar_url: string | null }> = {};
       profiles?.forEach(p => { profileMap[p.user_id] = { username: p.username, avatar_url: p.avatar_url }; });
+      // Determine acceptance: mutual follow OR explicit accept in conversation_state OR I've replied.
+      const { data: myFollowing } = await supabase.from('follows').select('following_id').eq('follower_id', user.id).in('following_id', userIds);
+      const { data: followersOfMe } = await supabase.from('follows').select('follower_id').eq('following_id', user.id).in('follower_id', userIds);
+      const { data: states } = await supabase.from('conversation_state').select('other_id, accepted').eq('owner_id', user.id).in('other_id', userIds);
+      const iFollow = new Set((myFollowing || []).map(f => f.following_id));
+      const followsMe = new Set((followersOfMe || []).map(f => f.follower_id));
+      const acceptedMap = new Map((states || []).map(s => [s.other_id, s.accepted] as const));
       const convs: Conversation[] = userIds.map(uid => {
+        const iReplied = convMap[uid].messages.some(m => m.sender_id === user.id);
+        const accepted = acceptedMap.get(uid) === true || (iFollow.has(uid) && followsMe.has(uid)) || iReplied;
         const latest = convMap[uid].messages[0];
-        return { user_id: uid, username: profileMap[uid]?.username || 'Unknown', avatar_url: profileMap[uid]?.avatar_url || null, lastMessage: latest.content, lastTime: latest.created_at, unread: convMap[uid].unread };
+        return { user_id: uid, username: profileMap[uid]?.username || 'Unknown', avatar_url: profileMap[uid]?.avatar_url || null, lastMessage: latest.content || (latest.media_type ? '📎 Attachment' : ''), lastTime: latest.created_at, unread: convMap[uid].unread, accepted };
       }).sort((a, b) => new Date(b.lastTime).getTime() - new Date(a.lastTime).getTime());
       setConversations(convs);
       setLoading(false);
@@ -158,19 +181,86 @@ const Notifications = () => {
       .or(`and(sender_id.eq.${user.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${user.id})`)
       .order('created_at', { ascending: true }).limit(100);
     setChatMessages(msgs || []);
+    // Fetch reactions for these messages
+    if (msgs && msgs.length > 0) {
+      const ids = msgs.map(m => m.id);
+      const { data: rx } = await supabase.from('message_reactions').select('*').in('message_id', ids);
+      setReactions(rx || []);
+      // Sign media urls
+      const mediaMsgs = msgs.filter(m => m.media_url);
+      if (mediaMsgs.length > 0) {
+        const urls: Record<string, string> = {};
+        await Promise.all(mediaMsgs.map(async m => {
+          const path = m.media_url!.replace(/^messages\//, '');
+          const { data } = await supabase.storage.from('messages').createSignedUrl(path, 3600);
+          if (data?.signedUrl) urls[m.id] = data.signedUrl;
+        }));
+        setSignedUrls(urls);
+      } else setSignedUrls({});
+    } else { setReactions([]); setSignedUrls({}); }
+    // Determine acceptance
+    const { data: st } = await supabase.from('conversation_state').select('accepted').eq('owner_id', user.id).eq('other_id', userId).maybeSingle();
+    const iReplied = (msgs || []).some(m => m.sender_id === user.id);
+    const { data: mutual } = await supabase.from('follows').select('id').eq('follower_id', user.id).eq('following_id', userId).maybeSingle();
+    const { data: back } = await supabase.from('follows').select('id').eq('follower_id', userId).eq('following_id', user.id).maybeSingle();
+    setChatAccepted(!!st?.accepted || iReplied || (!!mutual && !!back));
     if (msgs) {
       const unread = msgs.filter(m => m.receiver_id === user.id && !m.read).map(m => m.id);
       if (unread.length > 0) await supabase.from('messages').update({ read: true }).in('id', unread);
     }
   };
 
+  const acceptConversation = async () => {
+    if (!user || !activeChat) return;
+    await supabase.from('conversation_state').upsert({ owner_id: user.id, other_id: activeChat, accepted: true }, { onConflict: 'owner_id,other_id' });
+    setChatAccepted(true);
+    toast.success('Conversation accepted');
+  };
+
+  const uploadMedia = async (): Promise<{ url: string; type: string } | null> => {
+    if (!user || !mediaFile) return null;
+    setUploadingMedia(true);
+    const ext = mediaFile.name.split('.').pop() || 'bin';
+    const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from('messages').upload(path, mediaFile, { contentType: mediaFile.type });
+    setUploadingMedia(false);
+    if (error) { toast.error('Upload failed'); return null; }
+    return { url: `messages/${path}`, type: mediaFile.type.startsWith('video') ? 'video' : 'image' };
+  };
+
   const sendMessage = async () => {
-    if (!user || !activeChat || !newMessage.trim()) return;
+    if (!user || !activeChat) return;
+    if (!newMessage.trim() && !mediaFile) return;
     setSendingMessage(true);
-    const { error } = await supabase.from('messages').insert({ sender_id: user.id, receiver_id: activeChat, content: newMessage.trim() });
+    let media: { url: string; type: string } | null = null;
+    if (mediaFile) media = await uploadMedia();
+    const { data: inserted, error } = await supabase.from('messages').insert({
+      sender_id: user.id, receiver_id: activeChat, content: newMessage.trim(),
+      media_url: media?.url ?? null, media_type: media?.type ?? null,
+    }).select('*').single();
     if (error) { toast.error('Failed to send'); }
-    else { setNewMessage(''); }
+    else {
+      setNewMessage(''); setMediaFile(null);
+      if (inserted?.media_url) {
+        const path = inserted.media_url.replace(/^messages\//, '');
+        const { data } = await supabase.storage.from('messages').createSignedUrl(path, 3600);
+        if (data?.signedUrl) setSignedUrls(prev => ({ ...prev, [inserted.id]: data.signedUrl }));
+      }
+    }
     setSendingMessage(false);
+  };
+
+  const toggleReaction = async (messageId: string, emoji: string) => {
+    if (!user) return;
+    const existing = reactions.find(r => r.message_id === messageId && r.user_id === user.id && r.emoji === emoji);
+    if (existing) {
+      await supabase.from('message_reactions').delete().eq('id', existing.id);
+      setReactions(prev => prev.filter(r => r.id !== existing.id));
+    } else {
+      const { data } = await supabase.from('message_reactions').insert({ message_id: messageId, user_id: user.id, emoji }).select().single();
+      if (data) setReactions(prev => [...prev, data]);
+    }
+    setReactingTo(null);
   };
 
   const deleteMessage = async (msgId: string) => {
@@ -218,27 +308,77 @@ const Notifications = () => {
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {chatMessages.map(m => (
             <div key={m.id} className={`flex ${m.sender_id === user.id ? 'justify-end' : 'justify-start'} group`}>
-              <div
-                className={`max-w-[70%] px-3 py-2 rounded-2xl text-sm relative ${m.sender_id === user.id ? 'gradient-primary text-primary-foreground' : 'bg-muted text-foreground'}`}
-              >
-                {m.content}
-                <p className={`text-[9px] mt-0.5 ${m.sender_id === user.id ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
-                  {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
-                </p>
-                <button
-                  onClick={() => { if (confirm('Delete this message for everyone?')) deleteMessage(m.id); }}
-                  className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] items-center justify-center hidden group-hover:flex"
+              <div className="max-w-[75%] relative">
+                <div
+                  onDoubleClick={() => setReactingTo(m.id)}
+                  className={`px-3 py-2 rounded-2xl text-sm relative ${m.sender_id === user.id ? 'gradient-primary text-primary-foreground' : 'bg-muted text-foreground'}`}
                 >
-                  ×
-                </button>
+                  {m.media_url && signedUrls[m.id] && (
+                    m.media_type === 'video' ? (
+                      <video src={signedUrls[m.id]} controls playsInline className="rounded-lg max-h-64 mb-1" />
+                    ) : (
+                      <a href={signedUrls[m.id]} target="_blank" rel="noreferrer">
+                        <img src={signedUrls[m.id]} alt="attachment" className="rounded-lg max-h-64 mb-1 object-cover" />
+                      </a>
+                    )
+                  )}
+                  {m.content && <p className="whitespace-pre-wrap break-words">{m.content}</p>}
+                  <p className={`text-[9px] mt-0.5 ${m.sender_id === user.id ? 'text-primary-foreground/60' : 'text-muted-foreground'}`}>
+                    {formatDistanceToNow(new Date(m.created_at), { addSuffix: true })}
+                  </p>
+                  <button
+                    onClick={() => setReactingTo(reactingTo === m.id ? null : m.id)}
+                    className={`absolute -bottom-2 ${m.sender_id === user.id ? '-left-2' : '-right-2'} w-6 h-6 rounded-full bg-background border border-border items-center justify-center text-xs hidden group-hover:flex`}
+                    aria-label="React"
+                  ><Smile className="w-3 h-3" /></button>
+                  <button
+                    onClick={() => { if (confirm('Delete this message for everyone?')) deleteMessage(m.id); }}
+                    className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] items-center justify-center hidden group-hover:flex"
+                  >×</button>
+                </div>
+                {/* Reactions row */}
+                {reactions.filter(r => r.message_id === m.id).length > 0 && (
+                  <div className={`flex gap-1 mt-1 flex-wrap ${m.sender_id === user.id ? 'justify-end' : 'justify-start'}`}>
+                    {Object.entries(reactions.filter(r => r.message_id === m.id).reduce<Record<string, number>>((acc, r) => { acc[r.emoji] = (acc[r.emoji] || 0) + 1; return acc; }, {})).map(([e, c]) => (
+                      <button key={e} onClick={() => toggleReaction(m.id, e)} className="text-xs bg-muted border border-border rounded-full px-1.5 py-0.5">{e} {c > 1 ? c : ''}</button>
+                    ))}
+                  </div>
+                )}
+                {reactingTo === m.id && (
+                  <div className={`absolute z-10 -top-10 ${m.sender_id === user.id ? 'right-0' : 'left-0'} bg-background border border-border rounded-full shadow-lg px-2 py-1 flex gap-1`}>
+                    {REACTION_EMOJIS.map(e => (
+                      <button key={e} onClick={() => toggleReaction(m.id, e)} className="text-lg hover:scale-125 transition-transform">{e}</button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}
         </div>
+        {!chatAccepted && chatMessages.some(m => m.sender_id === activeChat) && (
+          <div className="sticky bottom-32 mx-4 mb-2 p-3 rounded-xl border border-border bg-muted/50 text-xs">
+            <p className="mb-2">This user isn't in your inbox yet. Accept the request to reply.</p>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={acceptConversation} className="gradient-primary text-primary-foreground">Accept</Button>
+              <Button size="sm" variant="outline" onClick={() => setActiveChat(null)}>Not now</Button>
+            </div>
+          </div>
+        )}
         <div className="sticky bottom-20 px-4 py-2 bg-background border-t border-border">
+          {mediaFile && (
+            <div className="mb-2 flex items-center gap-2 text-xs bg-muted rounded-lg px-2 py-1">
+              {mediaFile.type.startsWith('video') ? <Play className="w-3 h-3" /> : <Paperclip className="w-3 h-3" />}
+              <span className="truncate flex-1">{mediaFile.name}</span>
+              <button onClick={() => setMediaFile(null)}><X className="w-3 h-3" /></button>
+            </div>
+          )}
           <div className="flex gap-2">
-            <Input value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Type a message..." onKeyDown={e => e.key === 'Enter' && sendMessage()} />
-            <Button onClick={sendMessage} disabled={sendingMessage || !newMessage.trim()} size="icon" className="gradient-primary">
+            <label className="flex items-center justify-center w-10 h-10 rounded-md border border-border cursor-pointer hover:bg-muted" aria-label="Attach media">
+              <Paperclip className="w-4 h-4" />
+              <input type="file" accept="image/*,video/*" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) setMediaFile(f); }} />
+            </label>
+            <Input value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder={chatAccepted ? 'Type a message...' : 'Send a message request...'} onKeyDown={e => e.key === 'Enter' && sendMessage()} />
+            <Button onClick={sendMessage} disabled={sendingMessage || uploadingMedia || (!newMessage.trim() && !mediaFile)} size="icon" className="gradient-primary">
               <Send className="w-4 h-4 text-primary-foreground" />
             </Button>
           </div>
@@ -322,8 +462,15 @@ const Notifications = () => {
               <p className="text-xs text-muted-foreground mt-1">Search for a user above to start a conversation</p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
-              {conversations.map(c => (
+            <>
+              <div className="flex border-b border-border px-4">
+                <button onClick={() => setInboxTab('messages')} className={`flex-1 py-2 text-xs font-medium ${inboxTab === 'messages' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}>Messages</button>
+                <button onClick={() => setInboxTab('requests')} className={`flex-1 py-2 text-xs font-medium ${inboxTab === 'requests' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}>
+                  Requests{conversations.filter(c => !c.accepted).length > 0 ? ` · ${conversations.filter(c => !c.accepted).length}` : ''}
+                </button>
+              </div>
+              <div className="divide-y divide-border">
+                {conversations.filter(c => inboxTab === 'messages' ? c.accepted : !c.accepted).map(c => (
                 <button key={c.user_id} onClick={() => openChat(c.user_id)} className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors">
                   <Avatar className="w-12 h-12">
                     <AvatarImage src={c.avatar_url || undefined} className="object-cover" />
@@ -340,8 +487,14 @@ const Notifications = () => {
                     <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center">{c.unread}</span>
                   )}
                 </button>
-              ))}
-            </div>
+                ))}
+                {conversations.filter(c => inboxTab === 'messages' ? c.accepted : !c.accepted).length === 0 && (
+                  <div className="py-10 text-center text-xs text-muted-foreground">
+                    {inboxTab === 'requests' ? 'No pending requests' : 'No accepted messages yet'}
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       )}
