@@ -462,8 +462,15 @@ const Notifications = () => {
               <p className="text-xs text-muted-foreground mt-1">Search for a user above to start a conversation</p>
             </div>
           ) : (
-            <div className="divide-y divide-border">
-              {conversations.map(c => (
+            <>
+              <div className="flex border-b border-border px-4">
+                <button onClick={() => setInboxTab('messages')} className={`flex-1 py-2 text-xs font-medium ${inboxTab === 'messages' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}>Messages</button>
+                <button onClick={() => setInboxTab('requests')} className={`flex-1 py-2 text-xs font-medium ${inboxTab === 'requests' ? 'text-primary border-b-2 border-primary' : 'text-muted-foreground'}`}>
+                  Requests{conversations.filter(c => !c.accepted).length > 0 ? ` · ${conversations.filter(c => !c.accepted).length}` : ''}
+                </button>
+              </div>
+              <div className="divide-y divide-border">
+                {conversations.filter(c => inboxTab === 'messages' ? c.accepted : !c.accepted).map(c => (
                 <button key={c.user_id} onClick={() => openChat(c.user_id)} className="flex items-center gap-3 w-full px-4 py-3 text-left hover:bg-muted/50 transition-colors">
                   <Avatar className="w-12 h-12">
                     <AvatarImage src={c.avatar_url || undefined} className="object-cover" />
@@ -480,8 +487,14 @@ const Notifications = () => {
                     <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-accent text-accent-foreground text-[10px] font-bold flex items-center justify-center">{c.unread}</span>
                   )}
                 </button>
-              ))}
-            </div>
+                ))}
+                {conversations.filter(c => inboxTab === 'messages' ? c.accepted : !c.accepted).length === 0 && (
+                  <div className="py-10 text-center text-xs text-muted-foreground">
+                    {inboxTab === 'requests' ? 'No pending requests' : 'No accepted messages yet'}
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
       )}
