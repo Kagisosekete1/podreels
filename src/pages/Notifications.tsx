@@ -181,19 +181,86 @@ const Notifications = () => {
       .or(`and(sender_id.eq.${user.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${user.id})`)
       .order('created_at', { ascending: true }).limit(100);
     setChatMessages(msgs || []);
+    // Fetch reactions for these messages
+    if (msgs && msgs.length > 0) {
+      const ids = msgs.map(m => m.id);
+      const { data: rx } = await supabase.from('message_reactions').select('*').in('message_id', ids);
+      setReactions(rx || []);
+      // Sign media urls
+      const mediaMsgs = msgs.filter(m => m.media_url);
+      if (mediaMsgs.length > 0) {
+        const urls: Record<string, string> = {};
+        await Promise.all(mediaMsgs.map(async m => {
+          const path = m.media_url!.replace(/^messages\//, '');
+          const { data } = await supabase.storage.from('messages').createSignedUrl(path, 3600);
+          if (data?.signedUrl) urls[m.id] = data.signedUrl;
+        }));
+        setSignedUrls(urls);
+      } else setSignedUrls({});
+    } else { setReactions([]); setSignedUrls({}); }
+    // Determine acceptance
+    const { data: st } = await supabase.from('conversation_state').select('accepted').eq('owner_id', user.id).eq('other_id', userId).maybeSingle();
+    const iReplied = (msgs || []).some(m => m.sender_id === user.id);
+    const { data: mutual } = await supabase.from('follows').select('id').eq('follower_id', user.id).eq('following_id', userId).maybeSingle();
+    const { data: back } = await supabase.from('follows').select('id').eq('follower_id', userId).eq('following_id', user.id).maybeSingle();
+    setChatAccepted(!!st?.accepted || iReplied || (!!mutual && !!back));
     if (msgs) {
       const unread = msgs.filter(m => m.receiver_id === user.id && !m.read).map(m => m.id);
       if (unread.length > 0) await supabase.from('messages').update({ read: true }).in('id', unread);
     }
   };
 
+  const acceptConversation = async () => {
+    if (!user || !activeChat) return;
+    await supabase.from('conversation_state').upsert({ owner_id: user.id, other_id: activeChat, accepted: true }, { onConflict: 'owner_id,other_id' });
+    setChatAccepted(true);
+    toast.success('Conversation accepted');
+  };
+
+  const uploadMedia = async (): Promise<{ url: string; type: string } | null> => {
+    if (!user || !mediaFile) return null;
+    setUploadingMedia(true);
+    const ext = mediaFile.name.split('.').pop() || 'bin';
+    const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from('messages').upload(path, mediaFile, { contentType: mediaFile.type });
+    setUploadingMedia(false);
+    if (error) { toast.error('Upload failed'); return null; }
+    return { url: `messages/${path}`, type: mediaFile.type.startsWith('video') ? 'video' : 'image' };
+  };
+
   const sendMessage = async () => {
-    if (!user || !activeChat || !newMessage.trim()) return;
+    if (!user || !activeChat) return;
+    if (!newMessage.trim() && !mediaFile) return;
     setSendingMessage(true);
-    const { error } = await supabase.from('messages').insert({ sender_id: user.id, receiver_id: activeChat, content: newMessage.trim() });
+    let media: { url: string; type: string } | null = null;
+    if (mediaFile) media = await uploadMedia();
+    const { data: inserted, error } = await supabase.from('messages').insert({
+      sender_id: user.id, receiver_id: activeChat, content: newMessage.trim(),
+      media_url: media?.url ?? null, media_type: media?.type ?? null,
+    }).select('*').single();
     if (error) { toast.error('Failed to send'); }
-    else { setNewMessage(''); }
+    else {
+      setNewMessage(''); setMediaFile(null);
+      if (inserted?.media_url) {
+        const path = inserted.media_url.replace(/^messages\//, '');
+        const { data } = await supabase.storage.from('messages').createSignedUrl(path, 3600);
+        if (data?.signedUrl) setSignedUrls(prev => ({ ...prev, [inserted.id]: data.signedUrl }));
+      }
+    }
     setSendingMessage(false);
+  };
+
+  const toggleReaction = async (messageId: string, emoji: string) => {
+    if (!user) return;
+    const existing = reactions.find(r => r.message_id === messageId && r.user_id === user.id && r.emoji === emoji);
+    if (existing) {
+      await supabase.from('message_reactions').delete().eq('id', existing.id);
+      setReactions(prev => prev.filter(r => r.id !== existing.id));
+    } else {
+      const { data } = await supabase.from('message_reactions').insert({ message_id: messageId, user_id: user.id, emoji }).select().single();
+      if (data) setReactions(prev => [...prev, data]);
+    }
+    setReactingTo(null);
   };
 
   const deleteMessage = async (msgId: string) => {
