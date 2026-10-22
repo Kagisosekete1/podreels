@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { setPushExternalUserId } from '@/lib/push';
+import { identifyPushUser } from '@/lib/nativeApp';
 
 interface Profile {
   id: string;
@@ -57,9 +57,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
+          identifyPushUser(session.user.id);
           setTimeout(() => fetchProfile(session.user.id), 0);
-          setPushExternalUserId(session.user.id);
         } else {
+          identifyPushUser(null);
           setProfile(null);
         }
         setLoading(false);
@@ -70,7 +71,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
+        identifyPushUser(session.user.id);
         fetchProfile(session.user.id);
+      } else {
+        identifyPushUser(null);
       }
       setLoading(false);
     });
@@ -79,6 +83,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signOut = async () => {
+    await identifyPushUser(null);
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);

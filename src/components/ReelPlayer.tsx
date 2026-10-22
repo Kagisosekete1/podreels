@@ -1,14 +1,12 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, MessageCircle, Share2, Play, Bookmark, Send, Trash2, Tv } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Bookmark, Send, Trash2 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import CommentsSheet from '@/components/CommentsSheet';
 import AdOverlay from '@/components/AdOverlay';
-import VerifiedBadge from '@/components/VerifiedBadge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { extractYouTubeId } from '@/lib/youtube';
 import { toast } from 'sonner';
 
 interface ReelPlayerProps {
@@ -25,13 +23,11 @@ interface ReelPlayerProps {
     user_id: string;
     hashtags?: string[];
     duration_seconds?: number;
-    party_link?: string | null;
     profiles: {
       username: string;
       display_name: string | null;
       avatar_url: string | null;
       is_podcaster: boolean;
-      is_verified?: boolean;
     };
   };
   isActive: boolean;
@@ -76,16 +72,12 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
   const [likesCount, setLikesCount] = useState(reel.likes_count);
   const [commentsCount, setCommentsCount] = useState(reel.comments_count);
   const [progress, setProgress] = useState(0);
-  const [showContinue, setShowContinue] = useState(false);
   const viewCounted = useRef(false);
-  const loopCount = useRef(0);
-  const [, forceRerender] = useState(0);
   const [showAd, setShowAd] = useState(false);
   const adShownForThisActivation = useRef(false);
   // On mobile (and especially iOS PWA), autoplay is only allowed when muted.
   // We start muted, then let the user tap an explicit unmute button — that tap
   // is a real user gesture, so iOS honors the unmute.
-  const [isMuted, setIsMuted] = useState(true);
 
   // Show an ad after every N reel plays (per session).
   const AD_AFTER_PLAYS = 2;
@@ -132,35 +124,18 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
     }
   }, []);
 
-  // Handle loop count - pause after 4 plays
+  // Keep reels looping without adding any production play overlay.
   const handleVideoEnded = useCallback(() => {
-    loopCount.current += 1;
-    if (loopCount.current >= 4 && videoRef.current) {
-      videoRef.current.pause();
-      setIsPlaying(false);
-      setShowContinue(true);
-    } else if (videoRef.current) {
-      // manual loop so onEnded keeps firing
-      videoRef.current.currentTime = 0;
-      videoRef.current.play().catch(() => {});
-    }
-    forceRerender((n) => n + 1);
-  }, []);
-
-  const handleContinuePlaying = () => {
-    setShowContinue(false);
-    loopCount.current = 0;
     if (videoRef.current) {
+      videoRef.current.currentTime = 0;
       videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!videoRef.current) return;
     const v = videoRef.current;
     if (isActive) {
-      loopCount.current = 0;
-      setShowContinue(false);
       v.currentTime = 0;
       adShownForThisActivation.current = false;
 
@@ -178,16 +153,13 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         }
       } catch {}
 
-      // Always try to play with sound on.
       v.muted = false;
-      setIsMuted(false);
       v.play().then(() => {
         setIsPlaying(true);
       }).catch(() => {
-        // Autoplay-with-sound blocked (e.g. iOS): fall back to muted so the
-        // clip still plays; the next user tap will turn the sound on.
+        // Some Android WebViews reject sound-on autoplay. Retry muted so the
+        // reel still starts without the grey browser play overlay.
         v.muted = true;
-        setIsMuted(true);
         v.play().then(() => setIsPlaying(true)).catch(() => {});
       });
       if (!viewCounted.current && user) {
@@ -203,21 +175,17 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       setIsPlaying(false);
       setExpanded(false);
       setProgress(0);
-      setShowContinue(false);
-      loopCount.current = 0;
       setShowAd(false);
     }
-  }, [isActive, reel.id, user, isMobile]);
+  }, [isActive, reel.id, user]);
 
   const handleAdClose = useCallback(() => {
     setShowAd(false);
     if (videoRef.current && isActive) {
       const v = videoRef.current;
-      v.muted = isMuted;
       v.play().then(() => setIsPlaying(true)).catch(() => {
         if (videoRef.current) {
           videoRef.current.muted = true;
-          setIsMuted(true);
           videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
         }
       });
@@ -226,7 +194,7 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         supabase.rpc('increment_view_safe', { reel_uuid: reel.id, viewer_id: user.id });
       }
     }
-  }, [isActive, reel.id, user, isMuted]);
+  }, [isActive, reel.id, user]);
 
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -235,12 +203,8 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
       v.pause();
       setIsPlaying(false);
     } else {
-      // User gesture — always turn sound on when resuming playback.
-      v.muted = false;
-      setIsMuted(false);
       v.play().then(() => setIsPlaying(true)).catch(() => {
         v.muted = true;
-        setIsMuted(true);
         v.play().then(() => setIsPlaying(true)).catch(() => {});
       });
     }
@@ -252,37 +216,6 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
     } catch {
       navigator.clipboard.writeText(window.location.href);
       toast.success('Link copied!');
-    }
-  };
-
-  // Open the full episode in a Watch Party: reuse an existing party for this
-  // reel if one is live, otherwise start a new one prefilled with the reel.
-  const handleWatchParty = async () => {
-    const isOwner = !!(user && user.id === reel.user_id);
-    const { data } = await supabase
-      .from('watch_parties')
-      .select('id')
-      .eq('reel_id', reel.id)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (data?.id) {
-      navigate(`/watch-parties/${data.id}`);
-      return;
-    }
-    // Only the reel owner can host a party for their clip.
-    if (isOwner && reel.party_link) {
-      const vid = extractYouTubeId(reel.party_link);
-      const qs = new URLSearchParams({ reel: reel.id, title: reel.title });
-      if (vid) qs.set('video', vid);
-      navigate(`/watch-parties?${qs.toString()}`);
-    } else if (isOwner) {
-      toast('Add a Watch Party link to your clip first (Settings → My Clips).');
-    } else {
-      toast('No hosted party right now — check again later.', {
-        action: { label: 'Check again', onClick: () => handleWatchParty() },
-      });
     }
   };
 
@@ -336,40 +269,24 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
   // Desktop layout
   if (!isMobile) {
     return (
-      <div className="h-screen w-full flex items-center justify-center bg-background gap-4 snap-start snap-always" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}>
-        <div className="relative h-[calc(100vh-2rem)] aspect-[9/16] max-w-[400px] bg-foreground/95 rounded-2xl overflow-hidden">
+      <div className="h-[100dvh] w-full flex items-center justify-center bg-background gap-4 snap-start snap-always" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}>
+        <div className="relative h-[calc(100dvh-2rem)] aspect-[9/16] max-w-[400px] bg-black rounded-2xl overflow-hidden">
           <video
             ref={videoRef}
             src={reel.video_url}
             className="absolute inset-0 w-full h-full object-contain bg-black"
-            loop={false}
+            loop
             playsInline
             onClick={togglePlay}
             onTimeUpdate={handleTimeUpdate}
             onEnded={handleVideoEnded}
           />
-          {showContinue && (
-            <button onClick={handleContinuePlaying} className="absolute inset-0 flex items-center justify-center z-20 bg-black/50 backdrop-blur-sm">
-              <div className="flex flex-col items-center gap-3">
-                <Play className="w-12 h-12 text-white fill-white" />
-                <span className="text-white font-semibold text-sm">Continue Playing</span>
-              </div>
-            </button>
-          )}
-          {!isPlaying && !showContinue && (
-            <button onClick={togglePlay} className="absolute inset-0 flex items-center justify-center z-10">
-              <div className="w-14 h-14 rounded-full bg-background/30 backdrop-blur-sm flex items-center justify-center">
-                <Play className="w-7 h-7 text-primary-foreground fill-current ml-0.5" />
-              </div>
-            </button>
-          )}
           <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
 
           <div className="absolute bottom-4 left-3 right-3 z-20">
             <div className="flex items-center gap-1.5 mb-1.5">
-              <button onClick={() => navigate(`/profile/${reel.profiles.username}`)} className="flex items-center gap-1">
+              <button onClick={() => navigate(`/profile/${reel.profiles.username}`)}>
                 <span className="text-white font-semibold text-xs">@{reel.profiles.username}</span>
-                {reel.profiles.is_verified && <VerifiedBadge size={12} />}
               </button>
               {user && user.id !== reel.user_id && (
                 <button
@@ -441,13 +358,6 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
             <span className="text-muted-foreground text-[10px]">Reshare</span>
           </button>
 
-        {!!reel.party_link && (
-          <button onClick={handleWatchParty} className="flex flex-col items-center gap-0.5">
-            <Tv className="w-6 h-6 text-muted-foreground hover:text-foreground" />
-            <span className="text-muted-foreground text-[10px]">Party</span>
-          </button>
-        )}
-
           {user?.id === reel.user_id && (
             <button onClick={handleDelete} className="flex flex-col items-center gap-0.5">
               <Trash2 className="w-6 h-6 text-muted-foreground hover:text-destructive" />
@@ -468,39 +378,22 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
 
   // Mobile layout
   return (
-    <div className="h-screen w-full relative bg-foreground/95 flex items-center justify-center snap-start snap-always" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}>
+    <div className="h-[100dvh] w-full relative bg-black flex items-center justify-center snap-start snap-always overflow-hidden" style={{ scrollSnapAlign: 'start', scrollSnapStop: 'always' }}>
       <video
         ref={videoRef}
         src={reel.video_url}
         className="absolute inset-0 w-full h-full object-contain bg-black"
-        loop={false}
+        loop
         playsInline
         onClick={togglePlay}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleVideoEnded}
       />
 
-      {showContinue && (
-        <button onClick={handleContinuePlaying} className="absolute inset-0 flex items-center justify-center z-20 bg-black/50 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-3">
-            <Play className="w-14 h-14 text-white fill-white" />
-            <span className="text-white font-semibold text-base">Continue Playing</span>
-          </div>
-        </button>
-      )}
-
-      {!isPlaying && !showContinue && (
-        <button onClick={togglePlay} className="absolute inset-0 flex items-center justify-center z-10">
-          <div className="w-14 h-14 rounded-full bg-background/30 backdrop-blur-sm flex items-center justify-center">
-            <Play className="w-7 h-7 text-primary-foreground fill-current ml-0.5" />
-          </div>
-        </button>
-      )}
-
       <div className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-foreground/80 to-transparent pointer-events-none" />
 
       {/* Right side actions */}
-      <div className="absolute right-2 bottom-28 flex flex-col items-center gap-3.5 z-20">
+      <div className="absolute right-2 bottom-[calc(env(safe-area-inset-bottom)+104px)] flex flex-col items-center gap-3 z-20">
         <button onClick={() => navigate(`/profile/${reel.profiles.username}`)} className="mb-1">
           <Avatar className="w-9 h-9 border-[1.5px] border-primary">
             <AvatarImage src={reel.profiles.avatar_url || undefined} className="object-cover" />
@@ -511,51 +404,55 @@ const ReelPlayer = ({ reel, isActive, isLiked, onToggleLike }: ReelPlayerProps) 
         </button>
 
         <button onClick={onToggleLike} className="flex flex-col items-center gap-0.5">
-          <Heart className={`w-5 h-5 ${isLiked ? 'text-accent fill-accent' : 'text-primary-foreground'}`} />
+          <span className="w-11 h-11 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center">
+            <Heart className={`w-5 h-5 ${isLiked ? 'text-accent fill-accent' : 'text-primary-foreground'}`} />
+          </span>
           <span className="text-primary-foreground text-[10px]">{formatCount(likesCount)}</span>
         </button>
 
         <button onClick={() => setShowComments(true)} className="flex flex-col items-center gap-0.5">
-          <MessageCircle className="w-5 h-5 text-primary-foreground" />
+          <span className="w-11 h-11 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center">
+            <MessageCircle className="w-5 h-5 text-primary-foreground" />
+          </span>
           <span className="text-primary-foreground text-[10px]">{formatCount(commentsCount)}</span>
         </button>
 
         <button onClick={handleSave} className="flex flex-col items-center gap-0.5">
-          <Bookmark className={`w-5 h-5 ${isSaved ? 'text-primary fill-primary' : 'text-primary-foreground'}`} />
+          <span className="w-11 h-11 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center">
+            <Bookmark className={`w-5 h-5 ${isSaved ? 'text-primary fill-primary' : 'text-primary-foreground'}`} />
+          </span>
           <span className="text-primary-foreground text-[10px]">Save</span>
         </button>
 
         <button onClick={handleShare} className="flex flex-col items-center gap-0.5">
-          <Send className="w-5 h-5 text-primary-foreground" />
+          <span className="w-11 h-11 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center">
+            <Send className="w-5 h-5 text-primary-foreground" />
+          </span>
           <span className="text-primary-foreground text-[10px]">Share</span>
         </button>
 
         <button onClick={handleShare} className="flex flex-col items-center gap-0.5">
-          <Share2 className="w-5 h-5 text-primary-foreground" />
+          <span className="w-11 h-11 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center">
+            <Share2 className="w-5 h-5 text-primary-foreground" />
+          </span>
           <span className="text-primary-foreground text-[10px]">Reshare</span>
         </button>
 
-        {!!reel.party_link && (
-          <button onClick={handleWatchParty} className="flex flex-col items-center gap-0.5">
-            <Tv className="w-5 h-5 text-primary-foreground" />
-            <span className="text-primary-foreground text-[10px]">Party</span>
-          </button>
-        )}
-
         {user?.id === reel.user_id && (
           <button onClick={handleDelete} className="flex flex-col items-center gap-0.5">
-            <Trash2 className="w-5 h-5 text-primary-foreground" />
+            <span className="w-11 h-11 rounded-full bg-black/45 backdrop-blur-sm flex items-center justify-center">
+              <Trash2 className="w-5 h-5 text-primary-foreground" />
+            </span>
             <span className="text-primary-foreground text-[10px]">Delete</span>
           </button>
         )}
       </div>
 
       {/* Bottom info */}
-      <div className="absolute bottom-20 left-3 right-14 z-20">
+      <div className="absolute bottom-[calc(env(safe-area-inset-bottom)+86px)] left-3 right-16 z-20">
         <div className="flex items-center gap-1.5 mb-1.5">
-          <button onClick={() => navigate(`/profile/${reel.profiles.username}`)} className="flex items-center gap-1">
+          <button onClick={() => navigate(`/profile/${reel.profiles.username}`)}>
             <span className="text-primary-foreground font-semibold text-xs">@{reel.profiles.username}</span>
-            {reel.profiles.is_verified && <VerifiedBadge size={12} />}
           </button>
           {user && user.id !== reel.user_id && (
             <button

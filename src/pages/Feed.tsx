@@ -54,7 +54,7 @@ const Feed = () => {
   const fetchReels = useCallback(async () => {
     const { data, error } = await supabase
       .from('reels')
-      .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster, is_verified)')
+      .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster)')
       .order('created_at', { ascending: false })
       .limit(50);
 
@@ -70,7 +70,7 @@ const Feed = () => {
           // Target wasn't in the first page — fetch it directly and prepend
           const { data: extra } = await supabase
             .from('reels')
-            .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster, is_verified)')
+            .select('*, profiles!reels_user_id_fkey(username, display_name, avatar_url, is_podcaster)')
             .eq('id', targetReelId)
             .maybeSingle();
           if (extra) {
@@ -100,15 +100,8 @@ const Feed = () => {
     fetchReels();
     const channel = supabase
       .channel('reels-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reels' }, () => {
-        // Only refetch when a brand-new reel is added. UPDATE events (like/comment
-        // count changes) are handled inline by ReelPlayer's per-reel subscription,
-        // so we must NOT refetch/reshuffle here — that resets the currently playing video.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reels' }, () => {
         fetchReels();
-      })
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'reels' }, (payload) => {
-        const deletedId = (payload.old as any)?.id;
-        if (deletedId) setReels(prev => prev.filter(r => r.id !== deletedId));
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -178,15 +171,17 @@ const Feed = () => {
     if (isLiked) {
       setLikedReels(prev => { const n = new Set(prev); n.delete(reelId); return n; });
       await supabase.from('likes').delete().eq('user_id', user.id).eq('reel_id', reelId);
+      await supabase.from('reels').update({ likes_count: Math.max(0, reel.likes_count - 1) }).eq('id', reelId);
     } else {
       setLikedReels(prev => new Set(prev).add(reelId));
       await supabase.from('likes').insert({ user_id: user.id, reel_id: reelId });
+      await supabase.from('reels').update({ likes_count: reel.likes_count + 1 }).eq('id', reelId);
     }
   };
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
+      <div className="h-[100dvh] flex items-center justify-center bg-background">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -194,7 +189,7 @@ const Feed = () => {
 
   if (reels.length === 0) {
     return (
-      <div className="h-screen flex flex-col bg-background">
+      <div className="h-[100dvh] flex flex-col bg-background">
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
           <div className="w-20 h-20 rounded-full gradient-primary flex items-center justify-center mb-6">
             <span className="text-3xl">🎙️</span>
@@ -210,17 +205,9 @@ const Feed = () => {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      <div
-        className="absolute top-0 left-0 right-0 z-30 px-4 pb-2 flex items-center gap-2"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top) + 14px)' }}
-      >
-        <img
-          src="/logo.png"
-          alt="Clpped"
-          className="w-8 h-8 rounded-xl ring-1 ring-white/30 shadow-md object-cover"
-        />
-        <span className="text-white font-black text-lg drop-shadow-lg tracking-tight">Clpped</span>
+    <div className="h-[100dvh] flex flex-col bg-black overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 z-30 px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] pb-2 pointer-events-none">
+        <span className="text-primary-foreground font-black text-lg drop-shadow-lg" style={{ opacity: 0.4 }}>Clipped</span>
       </div>
       <div
         ref={containerRef}

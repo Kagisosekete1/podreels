@@ -515,7 +515,9 @@ const Profile = () => {
                   {reel.thumbnail_url ? (
                     <img src={reel.thumbnail_url} className="w-full h-full object-cover" alt={reel.title} />
                   ) : (
-                    <video src={reel.video_url} className="w-full h-full object-cover" muted preload="metadata" />
+                    <div className="w-full h-full flex items-center justify-center bg-[radial-gradient(circle_at_30%_15%,hsl(var(--primary)/0.28),transparent_32%),linear-gradient(135deg,#101413,#2e3835_48%,#111)]">
+                      <img src="/logo.png" alt="" className="w-12 h-12 rounded-xl opacity-90" loading="lazy" />
+                    </div>
                   )}
                   <div className="absolute bottom-1 left-1 flex items-center gap-1">
                     <span className="text-primary-foreground text-xs font-medium drop-shadow-md">▶ {reel.views_count}</span>

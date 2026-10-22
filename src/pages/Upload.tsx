@@ -5,18 +5,72 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, Upload as UploadIcon, Loader2, Film, ImagePlus, Clapperboard, Tag, Type, Hash, Sparkles, Tv, Plus, X } from 'lucide-react';
-import { extractYouTubeId } from '@/lib/youtube';
+import { Textarea } from '@/components/ui/textarea';
+import { ArrowLeft, Upload as UploadIcon, Loader2, Film, ImagePlus, Clapperboard, Tag, Type, AlignLeft, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import BottomNav from '@/components/BottomNav';
 
-const CATEGORIES = ['Comedy', 'True Crime', 'Tech', 'Business', 'Health', 'Motivation', 'Education', 'News', 'Sports', 'Music', 'Lifestyle', 'Science', 'Other', 'General', 'CRIME'];
+interface GeneratedThumbnail {
+  url: string;
+  blob: Blob;
+}
 
-const PRESET_HASHTAGS = ['clpped', 'podcast', 'fyp', 'fypppppppppp', 'foryou', 'trendingclpped', 'trending'];
+const generateVideoThumbnails = (videoUrl: string): Promise<GeneratedThumbnail[]> => {
+  return new Promise((resolve) => {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    video.playsInline = true;
+    video.src = videoUrl;
 
-const normalizeTag = (raw: string) =>
-  raw.trim().toLowerCase().replace(/^#+/, '').replace(/[^a-z0-9_]/g, '').slice(0, 40);
+    const cleanup = () => {
+      video.removeAttribute('src');
+      video.load();
+    };
+
+    video.onerror = () => {
+      cleanup();
+      resolve([]);
+    };
+
+    video.onloadedmetadata = async () => {
+      const duration = Number.isFinite(video.duration) && video.duration > 0 ? video.duration : 1;
+      const times = [0.12, 0.38, 0.66].map((ratio) => Math.min(duration - 0.05, Math.max(0.05, duration * ratio)));
+      const canvas = document.createElement('canvas');
+      const width = video.videoWidth || 720;
+      const height = video.videoHeight || 1280;
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        cleanup();
+        resolve([]);
+        return;
+      }
+
+      const results: GeneratedThumbnail[] = [];
+      for (const time of times) {
+        await new Promise<void>((done) => {
+          const onSeeked = () => {
+            try {
+              ctx.drawImage(video, 0, 0, width, height);
+              canvas.toBlob((blob) => {
+                if (blob) results.push({ blob, url: URL.createObjectURL(blob) });
+                done();
+              }, 'image/jpeg', 0.86);
+            } catch {
+              done();
+            }
+          };
+          video.currentTime = time;
+          video.onseeked = onSeeked;
+        });
+      }
+      cleanup();
+      resolve(results);
+    };
+  });
+};
 
 const Upload = () => {
   const navigate = useNavigate();
@@ -29,29 +83,16 @@ const Upload = () => {
   const [preview, setPreview] = useState<string | null>(null);
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
+  const [generatedThumbnails, setGeneratedThumbnails] = useState<GeneratedThumbnail[]>([]);
+  const [selectedGeneratedThumb, setSelectedGeneratedThumb] = useState<number | null>(null);
   const [title, setTitle] = useState('');
-  const [hashtags, setHashtags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
+  const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
-  const [partyLink, setPartyLink] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
 
-  const addTag = (raw: string) => {
-    const t = normalizeTag(raw);
-    if (!t) return;
-    if (hashtags.includes(t)) return;
-    if (hashtags.length >= 10) {
-      toast({ title: 'Max 10 hashtags', variant: 'destructive' });
-      return;
-    }
-    setHashtags([...hashtags, t]);
-    setTagInput('');
-  };
+  const wordCount = description.trim() ? description.trim().split(/\s+/).filter(Boolean).length : 0;
 
-  const removeTag = (t: string) => setHashtags(hashtags.filter((h) => h !== t));
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
     if (!f.type.startsWith('video/')) {
@@ -62,8 +103,18 @@ const Upload = () => {
       toast({ title: 'File too large (max 100MB)', variant: 'destructive' });
       return;
     }
+    if (preview) URL.revokeObjectURL(preview);
+    generatedThumbnails.forEach((thumb) => URL.revokeObjectURL(thumb.url));
+    const objectUrl = URL.createObjectURL(f);
     setFile(f);
-    setPreview(URL.createObjectURL(f));
+    setPreview(objectUrl);
+    setThumbnailFile(null);
+    setThumbnailPreview(null);
+    setGeneratedThumbnails([]);
+    setSelectedGeneratedThumb(null);
+    const thumbs = await generateVideoThumbnails(objectUrl);
+    setGeneratedThumbnails(thumbs);
+    setSelectedGeneratedThumb(thumbs.length > 0 ? 0 : null);
   };
 
   const handleThumbnailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,7 +130,16 @@ const Upload = () => {
       return;
     }
     setThumbnailFile(f);
+    if (thumbnailPreview) URL.revokeObjectURL(thumbnailPreview);
     setThumbnailPreview(URL.createObjectURL(f));
+    setSelectedGeneratedThumb(null);
+  };
+
+  // Extract hashtags from description
+  const extractHashtags = (text: string): string[] => {
+    const matches = text.match(/#(\w+)/g);
+    if (!matches) return [];
+    return [...new Set(matches.map(m => m.slice(1).toLowerCase()))].slice(0, 10);
   };
 
   const handleUpload = async () => {
@@ -88,42 +148,17 @@ const Upload = () => {
       return;
     }
 
-    const trimmedPartyLink = partyLink.trim();
-    if (trimmedPartyLink && !extractYouTubeId(trimmedPartyLink)) {
-      toast({ title: 'Watch Party link must be a valid YouTube URL', variant: 'destructive' });
-      return;
-    }
 
     setUploading(true);
-    setUploadProgress(0);
     try {
       const ext = file.name.split('.').pop();
       const filePath = `${user.id}/${Date.now()}.${ext}`;
 
-      // Signed upload URL so we can track progress via XHR
-      const { data: signed, error: signErr } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('reels')
-        .createSignedUploadUrl(filePath);
-      if (signErr || !signed) throw signErr || new Error('Failed to prepare upload');
+        .upload(filePath, file, { contentType: file.type });
 
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('PUT', signed.signedUrl, true);
-        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-        xhr.setRequestHeader('x-upsert', 'true');
-        xhr.upload.onprogress = (ev) => {
-          if (ev.lengthComputable) {
-            setUploadProgress(Math.round((ev.loaded / ev.total) * 100));
-          }
-        };
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) resolve();
-          else reject(new Error(`Upload failed (${xhr.status})`));
-        };
-        xhr.onerror = () => reject(new Error('Network error during upload'));
-        xhr.send(file);
-      });
-      setUploadProgress(100);
+      if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage.from('reels').getPublicUrl(filePath);
 
@@ -140,26 +175,30 @@ const Upload = () => {
       }
 
       let thumbnailUrl: string | null = null;
-      if (thumbnailFile) {
-        const thumbExt = thumbnailFile.name.split('.').pop();
+      const generatedThumb = selectedGeneratedThumb !== null ? generatedThumbnails[selectedGeneratedThumb] : null;
+      if (thumbnailFile || generatedThumb) {
+        const thumbSource = thumbnailFile || generatedThumb!.blob;
+        const contentType = thumbnailFile?.type || 'image/jpeg';
+        const thumbExt = thumbnailFile ? thumbnailFile.name.split('.').pop() : 'jpg';
         const thumbPath = `${user.id}/thumb_${Date.now()}.${thumbExt}`;
-        const { error: thumbErr } = await supabase.storage.from('reels').upload(thumbPath, thumbnailFile, { contentType: thumbnailFile.type });
+        const { error: thumbErr } = await supabase.storage.from('reels').upload(thumbPath, thumbSource, { contentType });
         if (!thumbErr) {
           const { data: thumbUrl } = supabase.storage.from('reels').getPublicUrl(thumbPath);
           thumbnailUrl = thumbUrl.publicUrl;
         }
       }
 
+      const hashtags = extractHashtags(description);
+
       const { error: insertError } = await supabase.from('reels').insert({
         user_id: user.id,
         title: title.trim(),
-        description: hashtags.length ? hashtags.map((h) => `#${h}`).join(' ') : null,
+        description: description.trim() || null,
         video_url: urlData.publicUrl,
         thumbnail_url: thumbnailUrl,
         category: category.trim() || 'General',
         duration_seconds: duration,
-        hashtags,
-        party_link: trimmedPartyLink || null,
+        hashtags: hashtags.length > 0 ? hashtags : [],
       });
 
       if (insertError) throw insertError;
@@ -170,7 +209,6 @@ const Upload = () => {
       toast({ title: 'Upload failed', description: error.message, variant: 'destructive' });
     } finally {
       setUploading(false);
-      setUploadProgress(0);
     }
   };
 
@@ -178,6 +216,8 @@ const Upload = () => {
     navigate('/auth');
     return null;
   }
+
+  const activeThumbnailPreview = thumbnailPreview || (selectedGeneratedThumb !== null ? generatedThumbnails[selectedGeneratedThumb]?.url : null);
 
   return (
     <div className="min-h-screen bg-background pb-28">
@@ -214,7 +254,13 @@ const Upload = () => {
           >
             {preview ? (
               <>
-                <video src={preview} className="w-full h-full object-cover" controls />
+                {activeThumbnailPreview ? (
+                  <img src={activeThumbnailPreview} className="w-full h-full object-cover" alt="Selected clip thumbnail" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-black">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                )}
                 <span className="absolute top-2 right-2 text-[10px] font-semibold px-2 py-1 rounded-full bg-background/80 backdrop-blur text-foreground">Tap to change</span>
               </>
             ) : (
@@ -228,108 +274,27 @@ const Upload = () => {
             )}
           </div>
           {file && <p className="text-[11px] text-center text-muted-foreground mt-2 truncate">{file.name}</p>}
+          {generatedThumbnails.length > 0 && (
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {generatedThumbnails.map((thumb, index) => (
+                <button
+                  key={thumb.url}
+                  type="button"
+                  onClick={() => { setSelectedGeneratedThumb(index); setThumbnailFile(null); setThumbnailPreview(null); }}
+                  className={`aspect-[9/16] overflow-hidden rounded-xl border-2 transition-colors ${
+                    selectedGeneratedThumb === index && !thumbnailFile ? 'border-primary' : 'border-border'
+                  }`}
+                >
+                  <img src={thumb.url} alt={`Thumbnail ${index + 1}`} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <input ref={fileInputRef} type="file" accept="video/*" className="hidden" onChange={handleFileChange} />
 
         {/* Details card */}
         <div className="rounded-2xl border border-border bg-card p-4 space-y-5">
-          <div>
-            <Label htmlFor="title" className="flex items-center gap-1.5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <Type className="w-3.5 h-3.5" /> Title <span className="text-primary">*</span>
-            </Label>
-            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What's this clip about?" maxLength={100} className="rounded-xl" />
-          </div>
-
-          <div>
-            <Label htmlFor="hashtag" className="flex items-center gap-1.5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <Hash className="w-3.5 h-3.5" /> Hashtags <span className="font-normal normal-case tracking-normal text-muted-foreground/70">({hashtags.length}/10)</span>
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                id="hashtag"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ',' || e.key === ' ') {
-                    e.preventDefault();
-                    addTag(tagInput);
-                  } else if (e.key === 'Backspace' && !tagInput && hashtags.length) {
-                    removeTag(hashtags[hashtags.length - 1]);
-                  }
-                }}
-                placeholder="Type a hashtag and press Enter"
-                className="rounded-xl"
-                disabled={hashtags.length >= 10}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="rounded-xl shrink-0"
-                onClick={() => addTag(tagInput)}
-                disabled={!tagInput.trim() || hashtags.length >= 10}
-                aria-label="Add hashtag"
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            </div>
-
-            {hashtags.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {hashtags.map((t) => (
-                  <span key={t} className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary text-xs font-semibold pl-2.5 pr-1 py-1">
-                    #{t}
-                    <button
-                      type="button"
-                      onClick={() => removeTag(t)}
-                      className="w-4 h-4 rounded-full flex items-center justify-center hover:bg-primary/20"
-                      aria-label={`Remove ${t}`}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <p className="text-[11px] mt-3 mb-1.5 text-muted-foreground">Quick add:</p>
-            <div className="flex flex-wrap gap-1.5">
-              {PRESET_HASHTAGS.map((t) => {
-                const active = hashtags.includes(t);
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => (active ? removeTag(t) : addTag(t))}
-                    className={`text-xs font-medium rounded-full px-2.5 py-1 border transition-colors ${
-                      active
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'border-border text-hashtag hover:bg-muted'
-                    }`}
-                  >
-                    #{t}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="category" className="flex items-center gap-1.5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <Tag className="w-3.5 h-3.5" /> Category
-            </Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger id="category" className="rounded-xl">
-                <SelectValue placeholder="Pick a category" />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Thumbnail */}
           <div>
             <Label className="flex items-center gap-1.5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -339,8 +304,8 @@ const Upload = () => {
               onClick={() => thumbInputRef.current?.click()}
               className="h-24 w-40 rounded-xl border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all overflow-hidden"
             >
-              {thumbnailPreview ? (
-                <img src={thumbnailPreview} className="w-full h-full object-cover" alt="Thumbnail" />
+              {activeThumbnailPreview ? (
+                <img src={activeThumbnailPreview} className="w-full h-full object-cover" alt="Thumbnail" />
               ) : (
                 <div className="flex flex-col items-center">
                   <ImagePlus className="w-6 h-6 text-muted-foreground" />
@@ -351,19 +316,34 @@ const Upload = () => {
             <input ref={thumbInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleThumbnailChange} />
           </div>
 
-          {/* Watch Party full-episode link */}
           <div>
-            <Label htmlFor="party_link" className="flex items-center gap-1.5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              <Tv className="w-3.5 h-3.5" /> Watch Party link <span className="font-normal normal-case tracking-normal text-muted-foreground/70">(optional)</span>
+            <Label htmlFor="title" className="flex items-center gap-1.5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <Type className="w-3.5 h-3.5" /> Title <span className="text-primary">*</span>
             </Label>
-            <Input
-              id="party_link"
-              value={partyLink}
-              onChange={(e) => setPartyLink(e.target.value)}
-              placeholder="Paste the full episode YouTube link"
-              className="rounded-xl"
+            <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="What's this clip about?" maxLength={100} className="rounded-xl" />
+          </div>
+
+          <div>
+            <Label htmlFor="description" className="flex items-center gap-1.5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <AlignLeft className="w-3.5 h-3.5" /> Description
+            </Label>
+            <Textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Write about your clip... Add #hashtags inline like #podcast #comedy"
+              rows={5}
+              maxLength={2000}
+              className="rounded-xl resize-none"
             />
-            <p className="text-[11px] mt-1.5 text-muted-foreground">Add a full episode link so viewers can host a Watch Party from your clip.</p>
+            <p className="text-[11px] mt-1.5 text-muted-foreground">{wordCount} words · add #hashtags inline</p>
+          </div>
+
+          <div>
+            <Label htmlFor="category" className="flex items-center gap-1.5 mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <Tag className="w-3.5 h-3.5" /> Category
+            </Label>
+            <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g. Comedy, Tech, True Crime..." maxLength={30} className="rounded-xl" />
           </div>
         </div>
 
@@ -373,17 +353,8 @@ const Upload = () => {
           className="w-full h-12 rounded-2xl gradient-primary text-primary-foreground font-semibold shadow-lg shadow-primary/25 disabled:opacity-50 disabled:shadow-none"
         >
           {uploading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <UploadIcon className="w-5 h-5 mr-2" />}
-          {uploading ? `Uploading… ${uploadProgress}%` : 'Post Clip'}
+          {uploading ? 'Uploading...' : 'Post Clip'}
         </Button>
-
-        {uploading && (
-          <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
-            <div
-              className="h-full gradient-primary transition-all duration-150"
-              style={{ width: `${uploadProgress}%` }}
-            />
-          </div>
-        )}
       </div>
 
       <BottomNav />

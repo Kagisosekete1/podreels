@@ -6,46 +6,46 @@
 
 @layer base {
   :root {
-    --background: 30 25% 98%;
-    --foreground: 20 15% 10%;
+    --background: 0 0% 99%;
+    --foreground: 220 14% 10%;
 
-    --card: 30 20% 96%;
-    --card-foreground: 20 15% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 220 14% 10%;
 
-    --popover: 30 25% 98%;
-    --popover-foreground: 20 15% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 14% 10%;
 
-    --primary: 24 85% 55%;
+    --primary: 160 72% 42%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 30 15% 93%;
-    --secondary-foreground: 20 15% 15%;
+    --secondary: 160 16% 94%;
+    --secondary-foreground: 220 14% 14%;
 
-    --muted: 30 12% 93%;
-    --muted-foreground: 20 8% 48%;
+    --muted: 160 10% 94%;
+    --muted-foreground: 220 8% 46%;
 
-    --accent: 350 75% 55%;
+    --accent: 174 68% 39%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 30 15% 88%;
-    --input: 30 15% 88%;
-    --ring: 24 85% 55%;
+    --border: 160 12% 88%;
+    --input: 160 12% 88%;
+    --ring: 160 72% 42%;
 
     --radius: 0.75rem;
 
-    --brand-gradient: linear-gradient(135deg, hsl(24 85% 55%), hsl(350 75% 55%));
+    --brand-gradient: linear-gradient(135deg, hsl(160 72% 42%), hsl(174 68% 39%));
 
     --sidebar-background: 30 25% 98%;
     --sidebar-foreground: 20 15% 10%;
-    --sidebar-primary: 24 85% 55%;
+    --sidebar-primary: 160 72% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 30 15% 93%;
     --sidebar-accent-foreground: 20 15% 15%;
     --sidebar-border: 30 15% 88%;
-    --sidebar-ring: 24 85% 55%;
+    --sidebar-ring: 160 72% 42%;
   }
 
   .dark {
@@ -58,7 +58,7 @@
     --popover: 20 12% 10%;
     --popover-foreground: 30 15% 94%;
 
-    --primary: 266 90% 62%;
+    --primary: 160 72% 42%;
     --primary-foreground: 0 0% 100%;
 
     --secondary: 20 10% 16%;
@@ -67,7 +67,7 @@
     --muted: 20 10% 16%;
     --muted-foreground: 20 8% 55%;
 
-    --accent: 266 90% 62%;
+    --accent: 174 68% 39%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -75,16 +75,16 @@
 
     --border: 20 10% 20%;
     --input: 20 10% 16%;
-    --ring: 266 90% 62%;
+    --ring: 160 72% 42%;
 
     --sidebar-background: 20 12% 6%;
     --sidebar-foreground: 30 15% 94%;
-    --sidebar-primary: 266 90% 62%;
+    --sidebar-primary: 160 72% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 20 10% 16%;
     --sidebar-accent-foreground: 30 12% 88%;
     --sidebar-border: 20 10% 20%;
-    --sidebar-ring: 266 90% 62%;
+    --sidebar-ring: 160 72% 42%;
   }
 }
 
@@ -96,14 +96,30 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', sans-serif;
+    margin: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    min-width: 0;
+    min-height: 100%;
+  }
+
+  #root {
+    min-height: 100dvh;
+  }
+
+  video {
+    background: #000;
   }
 }
 
 @layer utilities {
-  .text-hashtag {
-    color: hsl(205 90% 68%);
-  }
-
   .gradient-primary {
     background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
   }
@@ -128,14 +144,4 @@
   .snap-start {
     scroll-snap-align: start;
   }
-}
-
-/* Watch Party floating emoji reactions */
-@keyframes party-float-up {
-  0% { transform: translateY(0) scale(0.8); opacity: 0; }
-  15% { opacity: 1; transform: translateY(-10px) scale(1.1); }
-  100% { transform: translateY(-160px) scale(1); opacity: 0; }
-}
-.animate-party-float {
-  animation: party-float-up 3s ease-out forwards;
 }
