@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.clipped.app',
+  appId: 'com.semogroup.clpped',
   appName: 'Clipped',
   webDir: 'dist',
   android: {

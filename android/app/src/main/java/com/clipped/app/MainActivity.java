@@ -1,4 +1,4 @@
-package com.clipped.app;
+package com.semogroup.clpped;
 
 import android.graphics.Color;
 import android.os.Bundle;

@@ -2,7 +2,7 @@
 <resources>
     <string name="app_name">Clipped</string>
     <string name="title_activity_main">Clipped</string>
-    <string name="package_name">com.clipped.app</string>
-    <string name="custom_url_scheme">com.clipped.app</string>
+    <string name="package_name">com.semogroup.clpped</string>
+    <string name="custom_url_scheme">com.semogroup.clpped</string>
     <string name="onesignal_notification_accent_color">#22C79A</string>
 </resources>
