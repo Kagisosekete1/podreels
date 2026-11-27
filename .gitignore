@@ -18,6 +18,8 @@ build-signing/
 *.keystore
 *.apk
 *.aab
+*.idsig
+outputs/
 
 # Editor directories and files
 .vscode/*
